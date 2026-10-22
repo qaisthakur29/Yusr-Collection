@@ -1,0 +1,178 @@
+📄 YUSR COLLECTION - TYPOGRAPHY & DESIGN SYSTEM
+🎨 GLOBAL COLORS (Brand Palette)
+Background: Pure White (#FFFFFF)
+
+Primary Text (Headings/Important text): Charcoal Black (#1A1A1A)
+
+Secondary Text (Description/Less important): Grey (#666666)
+
+Accent / Brand Color (Buttons/Links): Warm Sand Gold (#C2A77A)
+
+Button Text Color: Deep Black (#111111)
+
+🔤 FONT FAMILIES
+Headings & Buttons: Montserrat (Sans-Serif)
+
+Body Text & Descriptions: DM Sans (Sans-Serif)
+
+📝 TYPOGRAPHY BREAKDOWN (Element-wise)
+1. Announcement Bar (Top most strip - e.g., "Free Shipping")
+Font: Montserrat
+
+Weight: Semi-Bold (600)
+
+Size: 12px
+
+Color: #1A1A1A
+
+Text Transform: UPPERCASE
+
+Letter Spacing: 0.1em
+
+2. Navigation Menu (Header Links)
+Font: Montserrat
+
+Weight: Medium (500)
+
+Size: 14px
+
+Color: #1A1A1A
+
+Text Transform: UPPERCASE
+
+Letter Spacing: 0.1em
+
+3. H1 (Hero Banner Main Heading)
+Font: Montserrat
+
+Weight: ExtraBold (800)
+
+Size (Desktop): 56px
+
+Size (Mobile): 40px
+
+Color: #1A1A1A
+
+Text Transform: UPPERCASE
+
+Letter Spacing: -0.02em (Tight)
+
+Line Height: 1.1
+
+4. H2 (Section Titles - e.g., "New Arrivals", "Our Story")
+Font: Montserrat
+
+Weight: Bold (700)
+
+Size (Desktop): 32px
+
+Size (Mobile): 24px
+
+Color: #1A1A1A
+
+Text Transform: UPPERCASE
+
+Letter Spacing: 0em
+
+Line Height: 1.2
+
+5. Product Title (On Product Cards & Product Page)
+Font: Montserrat
+
+Weight: Semi-Bold (600)
+
+Size: 16px (Cards) / 24px (Product Page)
+
+Color: #1A1A1A
+
+Text Transform: UPPERCASE
+
+Letter Spacing: 0.02em
+
+6. Product Price (Current)
+Font: Montserrat
+
+Weight: Bold (700)
+
+Size: 18px
+
+Color: #1A1A1A
+
+7. Product Price (Strikethrough MRP)
+Font: DM Sans
+
+Weight: Regular (400)
+
+Size: 14px
+
+Color: #666666
+
+Style: Line-through
+
+8. Body Text (Product Description, Policies)
+Font: DM Sans
+
+Weight: Regular (400)
+
+Size: 16px
+
+Color: #666666 (ya #1A1A1A agar bohot important ho)
+
+Letter Spacing: 0px (Normal)
+
+Line Height: 1.6 (Breathable spacing)
+
+9. Primary Button (e.g., "Add to Cart", "Buy Now")
+Font: Montserrat
+
+Weight: Bold (700)
+
+Size: 14px
+
+Text Color: #111111
+
+Background Color: #C2A77A
+
+Text Transform: UPPERCASE
+
+Letter Spacing: 0.05em
+
+Border Radius: 0px (Square edges look more premium) or 4px (Slight round).
+
+10. Secondary/Outline Button (e.g., "View Details")
+Font: Montserrat
+
+Weight: Semi-Bold (600)
+
+Size: 14px
+
+Text Color: #1A1A1A
+
+Border Color: #1A1A1A (1px solid)
+
+Background Color: Transparent
+
+Text Transform: UPPERCASE
+
+Letter Spacing: 0.05em
+
+11. Footer Text & Links
+Font: DM Sans
+
+Weight: Regular (400) for text, Medium (500) for links
+
+Size: 14px
+
+Color: #666666 (Text) / #1A1A1A (Links)
+
+Text Transform: Normal Case (No caps for footer links)
+
+⚠️ GOLDEN RULES FOR DEVELOPER / DESIGNER:
+
+Kisi bhi heading ko Italic ya Underline mat karna.
+
+Buttons aur Navigation mein hamesha Letter Spacing (gap) zyada rakhna.
+
+Mobile par kisi bhi text ka size 40px se bada nahi hona chahiye.
+
+Pure Black (#000000) use nahi karna, hamesha #1A1A1A use karna

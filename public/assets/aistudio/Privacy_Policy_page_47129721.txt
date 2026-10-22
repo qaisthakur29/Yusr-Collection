@@ -1,0 +1,16 @@
+4. 🔒 Privacy Policy Page
+
+Heading: PRIVACY POLICY
+
+Content:
+At Yusr Collection, your privacy is our priority. This policy explains how we collect and use your data.
+
+Information We Collect: When you place an order, we collect your name, shipping address, email, and phone number.
+
+How We Use It: We use this information solely to process your order, ship the product to you, and send order updates via WhatsApp/Email.
+
+Payment Security: We do not store your credit/debit card or UPI details. All payments are processed through secure third-party payment gateways (like Razorpay) which comply with PCI-DSS standards.
+
+Third-Party Partners: We share your shipping address with our printing and courier partners (Qikink) strictly for the purpose of fulfilling your order.
+
+Marketing: We will never sell or rent your data to third parties. You can opt out of our promotional messages at any time.

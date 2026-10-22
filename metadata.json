@@ -1,0 +1,6 @@
+{
+  "name": "Yusr Collection",
+  "description": "Premium, minimalist Islamic streetwear rooted in faith and built on struggles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

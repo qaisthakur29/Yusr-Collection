@@ -1,0 +1,24 @@
+🎨 Yusr Collection -  Color Palette
+1. Background: #FFFFFF (Pure White)
+
+Kyun: Clean canvas. Jab background white hota hai, toh products (especially black aur white t-shirts) sabse zyada pop karte hain. Log kapde ki quality aur design par focus karte hain.
+
+2. Text: #1A1A1A (Rich Charcoal Black)
+
+Kyun: Pure black (#000000) screen par kabhi-kabhi aankhon ko chubhta hai. #1A1A1A ek soft, premium black hai jo padhne mein ekdum crisp lagta hai aur streetwear brands (jaise Nike, Snitch) isi ka use karte hain.
+
+3. Solid Button Background (Primary Brand Color): #C2A77A (Warm Sand / Muted Gold)
+
+Kyun: Yeh tumhare t-shirt ke design wala exact color hai! Streetwear mein high-contrast black button chalte hain, lekin tumhara brand Islamic/premium hai. Yeh "Sand Gold" color luxury aur warm vibe deta hai. Log "Add to Cart" ya "Buy Now" par click karne ke liye attract honge.
+
+4. Solid Button Label (Text on Button): #111111 (Deep Black)
+
+Kyun: Kyunki tumhara button background (Sand Gold) thoda light hai. Agar uspar white text likhoge, toh padhne mein mushkil hogi. Black text #111111 sand gold ke upar ekdum royal aur readable lagega.
+
+5. Outline Button (Secondary Buttons like "View Details"): #1A1A1A (Charcoal)
+
+Kyun: Outline buttons hamesha subtle hone chahiye. Iska border aur text black hoga, jisse user ko pata chalega ki yeh secondary action hai, par yeh tumhare main text color se match karega, jisse website clean lagegi.
+
+6. Shadow: #E5E5E5 (Soft Light Grey)
+
+Kyun: Shadows kabhi pure black nahi hoti. Yeh soft grey shadow cards aur buttons ko ek halka sa "lift" degi (3D feel), jisse website flat nahi lagegi, balki premium aur layered lagegi.
