@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowRight, Check, ChevronRight } from 'lucide-react';
-import { Product, PRODUCTS, SIZE_CHART } from '../data/products';
+import { Product, fetchProductsFromDB } from '../data/products';
 import { useCart } from '../context/CartContext';
+import { ProductCardImage } from '../components/ProductCardImage';
 
 interface HomePageProps {
   onNavigate: (path: string) => void;
@@ -10,14 +11,22 @@ interface HomePageProps {
 
 export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
   const { addToCart } = useCart();
-  const [selectedQuickSize, setSelectedQuickSize] = useState<Record<string, 'S' | 'M' | 'L' | 'XL' | 'XXL'>>({
-    'yusr-01': 'L',
-    'yusr-02': 'L',
-    'yusr-03': 'L',
-    'yusr-04': 'L',
-  });
-  const [showSizeModal, setShowSizeModal] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedQuickSize, setSelectedQuickSize] = useState<Record<string, 'S' | 'M' | 'L' | 'XL' | 'XXL'>>({});
   const [addedBanner, setAddedBanner] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchProductsFromDB().then((data) => {
+      if (cancelled) return;
+      setProducts(data);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleQuickAdd = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -108,26 +117,21 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
               FEATURED COLLECTION
             </h2>
           </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setShowSizeModal(true)}
-              className="text-xs font-heading font-semibold text-[#666666] hover:text-[#1A1A1A] underline tracking-wider uppercase min-h-[44px] flex items-center"
-            >
-              Size Guide
-            </button>
-            <button
-              onClick={() => onNavigate('/shop')}
-              className="text-xs font-heading font-bold tracking-wider uppercase text-[#1A1A1A] hover:text-[#C2A77A] flex items-center gap-1.5 min-h-[44px]"
-            >
-              <span>View All</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={() => onNavigate('/shop')}
+            className="text-xs font-heading font-bold tracking-wider uppercase text-[#1A1A1A] hover:text-[#C2A77A] flex items-center gap-1.5 min-h-[44px]"
+          >
+            <span>View All</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Product Grid: 2 columns on mobile, 4 on desktop */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-          {PRODUCTS.map((product) => {
+          {loading ? (
+            <p className="col-span-2 md:col-span-4 text-sm text-[#666666] font-body">Loading...</p>
+          ) : null}
+          {(loading ? [] : products).map((product) => {
             const activeSize = selectedQuickSize[product.id] || 'L';
             return (
               <div
@@ -135,23 +139,12 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
                 onClick={() => onSelectProduct(product)}
                 className="group flex flex-col cursor-pointer bg-white"
               >
-                {/* Product Image Card with hover effect */}
-                <div className="relative aspect-4/5 w-full bg-[#F5F5F5] overflow-hidden border border-[#E5E5E5]">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
-                    referrerPolicy="no-referrer"
-                  />
-                  
-                  {/* Badge */}
+                <ProductCardImage product={product}>
                   {product.badge && (
                     <div className="absolute top-2.5 left-2.5 bg-[#1A1A1A] text-white px-2 py-0.5 text-[10px] font-heading font-bold uppercase tracking-wider">
                       {product.badge}
                     </div>
                   )}
-
-                  {/* Quick-add overlay for desktop */}
                   <div className="absolute inset-x-2 bottom-2 hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button
                       onClick={(e) => handleQuickAdd(product, e)}
@@ -160,7 +153,7 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
                       Quick Add ({activeSize})
                     </button>
                   </div>
-                </div>
+                </ProductCardImage>
 
                 {/* Product Metadata */}
                 <div className="pt-3 flex-1 flex flex-col justify-between">
@@ -247,62 +240,6 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
         </div>
       </section>
 
-      {/* 5. SIZE CHART MODAL */}
-      {showSizeModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white max-w-lg w-full p-6 text-[#1A1A1A] shadow-2xl relative">
-            <div className="flex justify-between items-center pb-4 border-b border-[#E5E5E5]">
-              <h3 className="font-heading font-bold text-base uppercase tracking-wider">
-                Yusr Oversized Size Guide (Inches)
-              </h3>
-              <button
-                onClick={() => setShowSizeModal(false)}
-                className="min-h-[40px] min-w-[40px] flex items-center justify-center text-[#666666] hover:text-[#1A1A1A]"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <p className="text-xs text-[#666666] my-3 font-body">
-              Our pieces feature a custom drop-shoulder oversized streetwear fit. If you prefer a regular tailored fit, consider sizing down.
-            </p>
-
-            <div className="overflow-x-auto border border-[#E5E5E5]">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-[#F8F8F8] font-heading font-bold uppercase text-[#1A1A1A] border-b border-[#E5E5E5]">
-                  <tr>
-                    <th className="p-2.5">Size</th>
-                    <th className="p-2.5">Chest</th>
-                    <th className="p-2.5">Length</th>
-                    <th className="p-2.5">Shoulder</th>
-                    <th className="p-2.5">Sleeve</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E5E5] font-body">
-                  {SIZE_CHART.map((row) => (
-                    <tr key={row.size} className="hover:bg-neutral-50">
-                      <td className="p-2.5 font-bold font-heading">{row.size}</td>
-                      <td className="p-2.5">{row.chest}</td>
-                      <td className="p-2.5">{row.length}</td>
-                      <td className="p-2.5">{row.shoulder}</td>
-                      <td className="p-2.5">{row.sleeve}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-[#E5E5E5] flex justify-end">
-              <button
-                onClick={() => setShowSizeModal(false)}
-                className="min-h-[40px] px-6 bg-[#1A1A1A] text-white font-heading font-bold text-xs uppercase"
-              >
-                Close Guide
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

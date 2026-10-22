@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Minus, Trash2, ArrowRight, ShieldCheck, Check, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { supabase } from '../lib/supabaseClient';
 
 export function CartDrawer() {
   const {
@@ -10,20 +11,14 @@ export function CartDrawer() {
     removeFromCart,
     updateQuantity,
     subtotal,
-    discount,
-    finalTotal,
-    couponCode,
-    applyCoupon,
-    removeCoupon,
     clearCart,
   } = useCart();
 
-  const [inputCoupon, setInputCoupon] = useState('');
-  const [couponError, setCouponError] = useState('');
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  // Checkout form state
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -37,49 +32,67 @@ export function CartDrawer() {
 
   if (!isOpen) return null;
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCouponError('');
-    const success = applyCoupon(inputCoupon);
-    if (!success) {
-      setCouponError('Invalid code. Try "PREPAID50" for ₹50 off.');
-    } else {
-      setInputCoupon('');
-    }
-  };
+  const isPrepaid = formData.paymentMethod === 'prepaid';
+  const prepaidDiscount = isPrepaid ? 50 : 0;
+  const orderTotal = Math.max(0, subtotal - prepaidDiscount);
 
-  const handleCheckoutSubmit = (e: React.FormEvent) => {
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.phone || !formData.address || !formData.pincode) {
       alert('Please fill in all required shipping fields.');
       return;
     }
 
-    // Generate WhatsApp confirmation message
+    const fullAddress = [formData.address, formData.city, formData.state, formData.pincode]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(', ');
+
+    setPlacingOrder(true);
+    setCheckoutError(null);
+
+    const { data: savedOrder, error: insertError } = await supabase
+      .from('orders')
+      .insert({
+        customer_name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        address: fullAddress,
+        total_amount: orderTotal,
+        status: 'Pending',
+      })
+      .select('id')
+      .single();
+
+    setPlacingOrder(false);
+
+    if (insertError || !savedOrder) {
+      setCheckoutError(insertError?.message || 'Could not save this order. Please try again.');
+      return;
+    }
+
     const orderItemsSummary = items
       .map((i) => `• ${i.product.name} (Size: ${i.size}, Qty: ${i.quantity}) - ₹${i.product.price * i.quantity}`)
       .join('\n');
 
-    const orderId = `YUSR-${Math.floor(100000 + Math.random() * 900000)}`;
+    const orderId = savedOrder.id;
     const msg = `Salam! I would like to place an order on Yusr Collection:
 
 📦 *Order ID:* ${orderId}
 👤 *Name:* ${formData.name}
 📞 *Phone:* ${formData.phone}
-📍 *Address:* ${formData.address}, ${formData.city}, ${formData.state} - ${formData.pincode}
-💳 *Payment:* ${formData.paymentMethod === 'prepaid' ? 'Prepaid (UPI / NetBanking - ₹50 Off)' : 'Cash on Delivery (COD)'}
+📍 *Address:* ${fullAddress}
+💳 *Payment:* ${isPrepaid ? 'Prepaid (UPI / NetBanking - ₹50 Off)' : 'Cash on Delivery (COD)'}
 
 🛍️ *Items:*
 ${orderItemsSummary}
 
-💰 *Total Amount:* ₹${finalTotal}
+💰 *Total Amount:* ₹${orderTotal}
 
 Please confirm my order and share payment/tracking details. Alhamdulillah!`;
 
     const encoded = encodeURIComponent(msg);
     const waUrl = `https://wa.me/919326184407?text=${encoded}`;
 
-    // Mark as success and open WhatsApp
     setOrderSuccess(true);
     setTimeout(() => {
       window.open(waUrl, '_blank');
@@ -89,7 +102,6 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Backdrop */}
       <div
         onClick={closeCart}
         className="fixed inset-0 bg-black/60 transition-opacity backdrop-blur-xs"
@@ -109,15 +121,9 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
             <button
               onClick={closeCart}
               className="min-h-[44px] min-w-[44px] flex items-center justify-center -mr-2 text-[#666666] hover:text-[#1A1A1A] transition-colors"
-              aria-label="Close cart"
             >
               <X className="w-6 h-6" />
             </button>
-          </div>
-
-          {/* Announcement banner inside cart */}
-          <div className="bg-[#F7F4EE] px-4 py-2.5 text-center text-xs font-heading font-medium tracking-[0.05em] text-[#1A1A1A] border-b border-[#E5E5E5]">
-            🎁 Use code <span className="font-bold underline text-[#1A1A1A]">PREPAID50</span> for ₹50 OFF on prepaid orders
           </div>
 
           {/* Cart Content */}
@@ -261,7 +267,10 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                       />
                       <span className="font-heading font-bold text-xs uppercase">UPI / Prepaid</span>
                     </div>
-                    <span className="text-[11px] text-[#666666] mt-1">Extra ₹50 Off + Fast dispatch</span>
+                    <span className="text-[11px] text-[#1A1A1A] mt-1.5 font-heading font-medium leading-relaxed">
+                      🎁 ₹50 OFF auto-applied
+                    </span>
+                    <span className="text-[11px] text-[#666666] mt-0.5">Fast dispatch</span>
                   </label>
 
                   <label
@@ -293,10 +302,10 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                   <span className="text-[#666666]">Items Total</span>
                   <span className="font-semibold tabular-nums">₹{subtotal}</span>
                 </div>
-                {discount > 0 && (
+                {isPrepaid && (
                   <div className="flex justify-between text-[#1A1A1A] font-semibold">
                     <span>Prepaid Discount</span>
-                    <span className="tabular-nums">-₹{discount}</span>
+                    <span className="tabular-nums text-emerald-700">-₹{prepaidDiscount}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
@@ -305,15 +314,22 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                 </div>
                 <div className="flex justify-between pt-2 border-t border-[#E5E5E5] font-heading font-bold text-sm">
                   <span>Grand Total</span>
-                  <span className="tabular-nums">₹{finalTotal}</span>
+                  <span className="tabular-nums">₹{orderTotal}</span>
                 </div>
               </div>
 
+              {checkoutError && (
+                <p className="text-xs text-red-600 font-body" role="alert">
+                  {checkoutError}
+                </p>
+              )}
+
               <button
                 type="submit"
-                className="w-full min-h-[48px] py-3.5 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm uppercase tracking-wide transition-colors flex items-center justify-center gap-2 shadow-sm"
+                disabled={placingOrder}
+                className="w-full min-h-[48px] py-3.5 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm uppercase tracking-wide transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-60"
               >
-                <span>CONFIRM & PLACE ORDER</span>
+                <span>{placingOrder ? 'SAVING ORDER…' : 'CONFIRM & PLACE ORDER'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -328,7 +344,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
               <ShoppingBag className="w-12 h-12 text-[#E5E5E5] mb-3 stroke-[1.2]" />
               <p className="font-heading font-bold text-sm uppercase tracking-wide mb-1">Your cart is empty</p>
               <p className="text-xs text-[#666666] mb-6 max-w-[220px]">
-                Discover our signature 240 GSM drops crafted for ease and legacy.
+                Discover our signature drops crafted for ease and legacy.
               </p>
               <button
                 onClick={closeCart}
@@ -358,7 +374,6 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                           <button
                             onClick={() => removeFromCart(item.product.id, item.size)}
                             className="min-h-[36px] min-w-[36px] flex items-center justify-center -mr-2 text-[#666666] hover:text-[#1A1A1A]"
-                            aria-label="Remove item"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -376,13 +391,11 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                         </div>
                       </div>
 
-                      {/* Quantity Stepper */}
                       <div className="flex items-center gap-3 mt-3">
                         <div className="flex items-center border border-[#E5E5E5]">
                           <button
                             onClick={() => updateQuantity(item.product.id, item.size, item.quantity - 1)}
                             className="min-h-[36px] min-w-[36px] flex items-center justify-center text-[#1A1A1A] hover:bg-neutral-100"
-                            aria-label="Decrease quantity"
                           >
                             <Minus className="w-3 h-3" />
                           </button>
@@ -392,7 +405,6 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                           <button
                             onClick={() => updateQuantity(item.product.id, item.size, item.quantity + 1)}
                             className="min-h-[36px] min-w-[36px] flex items-center justify-center text-[#1A1A1A] hover:bg-neutral-100"
-                            aria-label="Increase quantity"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
@@ -406,59 +418,20 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                 ))}
               </div>
 
-              {/* Coupon Bar & Summary */}
+              {/* Cart Summary (No Promo Code Box) */}
               <div className="border-t border-[#E5E5E5] p-6 bg-[#FBFBFB] space-y-4">
-                {/* Coupon Input */}
-                {couponCode ? (
-                  <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
-                    <span className="font-semibold font-heading">
-                      Coupon <span className="font-bold">{couponCode}</span> applied (-₹50)
-                    </span>
-                    <button
-                      onClick={removeCoupon}
-                      className="text-xs text-emerald-900 underline ml-2"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Promo code (e.g. PREPAID50)"
-                      value={inputCoupon}
-                      onChange={(e) => setInputCoupon(e.target.value)}
-                      className="flex-1 min-h-[44px] px-3 border border-[#E5E5E5] text-xs uppercase placeholder:normal-case focus:outline-none focus:border-[#C2A77A]"
-                    />
-                    <button
-                      type="submit"
-                      className="min-h-[44px] px-4 bg-[#1A1A1A] text-white font-heading font-semibold text-xs uppercase tracking-wide hover:bg-neutral-800"
-                    >
-                      Apply
-                    </button>
-                  </form>
-                )}
-                {couponError && <p className="text-[11px] text-red-600">{couponError}</p>}
-
-                {/* Totals */}
                 <div className="space-y-1.5 text-xs text-[#666666] font-body">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
                     <span className="text-[#1A1A1A] font-medium tabular-nums">₹{subtotal}</span>
                   </div>
-                  {discount > 0 && (
-                    <div className="flex justify-between text-emerald-700">
-                      <span>Discount</span>
-                      <span className="font-medium tabular-nums">-₹{discount}</span>
-                    </div>
-                  )}
                   <div className="flex justify-between">
                     <span>Shipping</span>
                     <span className="text-[#1A1A1A] font-medium">Calculated at next step (FREE Pan-India)</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-[#E5E5E5] font-heading font-bold text-base text-[#1A1A1A]">
                     <span>ESTIMATED TOTAL</span>
-                    <span className="tabular-nums">₹{finalTotal}</span>
+                    <span className="tabular-nums">₹{subtotal}</span>
                   </div>
                 </div>
 

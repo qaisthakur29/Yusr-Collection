@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Product, PRODUCTS } from '../data/products';
-import { Filter, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Product, fetchProductsFromDB } from '../data/products';
 import { useCart } from '../context/CartContext';
+import { ProductCardImage } from '../components/ProductCardImage';
 
 interface ShopPageProps {
   onSelectProduct: (product: Product) => void;
@@ -10,16 +10,25 @@ interface ShopPageProps {
 
 export function ShopPage({ onSelectProduct, onNavigate }: ShopPageProps) {
   const { addToCart } = useCart();
-  const [selectedCategory, setSelectedCategory] = useState<'All' | 'Tees' | 'Hoodies'>('All');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc'>('featured');
-  const [selectedSizes, setSelectedSizes] = useState<Record<string, 'S' | 'M' | 'L' | 'XL' | 'XXL'>>({
-    'yusr-01': 'L',
-    'yusr-02': 'L',
-    'yusr-03': 'L',
-    'yusr-04': 'L',
-  });
+  const [selectedSizes, setSelectedSizes] = useState<Record<string, 'S' | 'M' | 'L' | 'XL' | 'XXL'>>({});
 
-  const filteredProducts = PRODUCTS.filter((p) => {
+  useEffect(() => {
+    let cancelled = false;
+    fetchProductsFromDB().then((data) => {
+      if (cancelled) return;
+      setProducts(data);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredProducts = products.filter((p) => {
     if (selectedCategory === 'All') return true;
     return p.category === selectedCategory;
   }).sort((a, b) => {
@@ -62,7 +71,7 @@ export function ShopPage({ onSelectProduct, onNavigate }: ShopPageProps) {
           
           {/* Category Tabs */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
-            {(['All', 'Tees', 'Hoodies'] as const).map((cat) => (
+            {['All', ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))].map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
@@ -94,7 +103,10 @@ export function ShopPage({ onSelectProduct, onNavigate }: ShopPageProps) {
 
         {/* Product Grid: 2 columns on mobile, 4 on desktop */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-          {filteredProducts.map((product) => {
+          {loading ? (
+            <p className="col-span-2 md:col-span-4 text-sm text-[#666666] font-body">Loading...</p>
+          ) : null}
+          {(loading ? [] : filteredProducts).map((product) => {
             const currentSize = selectedSizes[product.id] || 'L';
             return (
               <div
@@ -102,21 +114,12 @@ export function ShopPage({ onSelectProduct, onNavigate }: ShopPageProps) {
                 onClick={() => onSelectProduct(product)}
                 className="group flex flex-col cursor-pointer bg-white"
               >
-                {/* Image Box */}
-                <div className="relative aspect-4/5 w-full bg-[#F5F5F5] overflow-hidden border border-[#E5E5E5]">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
-                    referrerPolicy="no-referrer"
-                  />
+                <ProductCardImage product={product}>
                   {product.badge && (
                     <div className="absolute top-2.5 left-2.5 bg-[#1A1A1A] text-white px-2 py-0.5 text-[10px] font-heading font-bold uppercase tracking-wider">
                       {product.badge}
                     </div>
                   )}
-
-                  {/* Desktop Quick Add */}
                   <div className="absolute inset-x-2 bottom-2 hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button
                       onClick={(e) => handleQuickAdd(product, e)}
@@ -125,7 +128,7 @@ export function ShopPage({ onSelectProduct, onNavigate }: ShopPageProps) {
                       Quick Add ({currentSize})
                     </button>
                   </div>
-                </div>
+                </ProductCardImage>
 
                 {/* Details */}
                 <div className="pt-3 flex-1 flex flex-col justify-between">

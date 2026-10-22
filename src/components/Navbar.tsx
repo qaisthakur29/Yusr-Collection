@@ -24,15 +24,6 @@ export function Navbar({ currentPath, onNavigate }: NavbarProps) {
 
   return (
     <>
-      {/* Announcement Bar */}
-      <div className="bg-[#1A1A1A] text-white py-2 px-4 text-center font-announcement border-b border-[#2A2A2A]">
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-[11px] sm:text-xs">
-          <span>FREE PAN-INDIA DELIVERY ON PREPAID ORDERS</span>
-          <span className="opacity-40" aria-hidden="true">·</span>
-          <span className="text-[#C2A77A] font-bold">₹50 OFF WITH CODE: PREPAID50</span>
-        </div>
-      </div>
-
       {/* Sticky Main Navigation */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E5E5E5] transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">

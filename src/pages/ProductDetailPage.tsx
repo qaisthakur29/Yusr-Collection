@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Product, SIZE_CHART } from '../data/products';
 import { useCart } from '../context/CartContext';
 import {
@@ -27,6 +27,10 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+
+  useEffect(() => {
+    setActiveImage(product.image);
+  }, [product.id, product.image]);
 
   const toggleAccordion = (id: string) => {
     setOpenAccordion(openAccordion === id ? null : id);
@@ -58,7 +62,11 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
     }
   };
 
-  const images = product.gallery && product.gallery.length > 0 ? product.gallery : [product.image];
+  const galleryImages = (product.gallery ?? []).map((url) => url.trim()).filter(Boolean);
+  const images =
+    galleryImages.length > 0
+      ? Array.from(new Set([product.image, ...galleryImages].filter(Boolean)))
+      : [product.image];
 
   return (
     <div className="bg-white min-h-[100dvh] py-6 sm:py-12">
@@ -95,7 +103,7 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
           
           {/* Left Column: Image Gallery */}
           <div className="space-y-4">
-            <div className="relative aspect-4/5 w-full bg-[#F5F5F5] border border-[#E5E5E5] overflow-hidden">
+            <div className="relative aspect-[4/5] w-full bg-[#F5F5F5] border border-[#E5E5E5] overflow-hidden">
               <img
                 src={activeImage}
                 alt={product.name}
@@ -110,8 +118,8 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
             </div>
 
             {/* Thumbnail Selectors if multiple images exist */}
-            {images.length > 1 && (
-              <div className="flex items-center gap-3">
+            {galleryImages.length > 0 && (
+              <div className="flex items-center gap-3 overflow-x-auto">
                 {images.map((img, idx) => (
                   <button
                     key={idx}
@@ -193,7 +201,7 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
                   className="flex items-center gap-1 text-xs font-heading font-semibold text-[#666666] hover:text-[#1A1A1A] underline tracking-wider uppercase min-h-[44px]"
                 >
                   <Ruler className="w-3.5 h-3.5 text-[#C2A77A]" />
-                  <span>Size Chart</span>
+                  <span>Size Guide</span>
                 </button>
               </div>
 
@@ -426,13 +434,14 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
         </button>
       </div>
 
-      {/* Size Chart Modal */}
+      {/* Size Guide Modal */}
       {showSizeModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white max-w-lg w-full p-6 text-[#1A1A1A] shadow-2xl relative">
+          {/* Added max-h and overflow-y-auto so long images scroll inside the modal */}
+          <div className="bg-white max-w-lg w-full p-6 text-[#1A1A1A] shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center pb-4 border-b border-[#E5E5E5]">
               <h3 className="font-heading font-bold text-base uppercase tracking-wider">
-                Yusr Oversized Size Guide (Inches)
+                Size Guide
               </h3>
               <button
                 onClick={() => setShowSizeModal(false)}
@@ -441,35 +450,47 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
                 ✕
               </button>
             </div>
-            
-            <p className="text-xs text-[#666666] my-3 font-body">
-              Our tees feature a custom drop-shoulder oversized streetwear fit. If you prefer a regular tailored fit, consider sizing down.
-            </p>
 
-            <div className="overflow-x-auto border border-[#E5E5E5]">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-[#F8F8F8] font-heading font-bold uppercase text-[#1A1A1A] border-b border-[#E5E5E5]">
-                  <tr>
-                    <th className="p-2.5">Size</th>
-                    <th className="p-2.5">Chest</th>
-                    <th className="p-2.5">Length</th>
-                    <th className="p-2.5">Shoulder</th>
-                    <th className="p-2.5">Sleeve</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E5E5] font-body">
-                  {SIZE_CHART.map((row) => (
-                    <tr key={row.size} className="hover:bg-neutral-50">
-                      <td className="p-2.5 font-bold font-heading">{row.size}</td>
-                      <td className="p-2.5">{row.chest}</td>
-                      <td className="p-2.5">{row.length}</td>
-                      <td className="p-2.5">{row.shoulder}</td>
-                      <td className="p-2.5">{row.sleeve}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {product.size_guide_url ? (
+              <div className="mt-4">
+                <img
+                  src={product.size_guide_url}
+                  alt={`${product.name} size guide`}
+                  className="w-full h-auto object-contain bg-[#FBFBFB] border border-[#E5E5E5]"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-[#666666] my-3 font-body">
+                  Our tees feature a custom drop-shoulder oversized streetwear fit. If you prefer a regular tailored fit, consider sizing down.
+                </p>
+                <div className="overflow-x-auto border border-[#E5E5E5]">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-[#F8F8F8] font-heading font-bold uppercase text-[#1A1A1A] border-b border-[#E5E5E5]">
+                      <tr>
+                        <th className="p-2.5">Size</th>
+                        <th className="p-2.5">Chest</th>
+                        <th className="p-2.5">Length</th>
+                        <th className="p-2.5">Shoulder</th>
+                        <th className="p-2.5">Sleeve</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E5E5] font-body">
+                      {SIZE_CHART.map((row) => (
+                        <tr key={row.size} className="hover:bg-neutral-50">
+                          <td className="p-2.5 font-bold font-heading">{row.size}</td>
+                          <td className="p-2.5">{row.chest}</td>
+                          <td className="p-2.5">{row.length}</td>
+                          <td className="p-2.5">{row.shoulder}</td>
+                          <td className="p-2.5">{row.sleeve}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
 
             <div className="mt-4 pt-3 border-t border-[#E5E5E5] flex justify-end">
               <button

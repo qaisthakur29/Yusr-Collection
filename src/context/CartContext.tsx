@@ -18,11 +18,6 @@ interface CartContextType {
   clearCart: () => void;
   totalCount: number;
   subtotal: number;
-  discount: number;
-  finalTotal: number;
-  couponCode: string;
-  applyCoupon: (code: string) => boolean;
-  removeCoupon: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -38,7 +33,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [isOpen, setIsOpen] = useState(false);
-  const [couponCode, setCouponCode] = useState('');
 
   useEffect(() => {
     try {
@@ -84,24 +78,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => {
     setItems([]);
-    setCouponCode('');
   };
-
-  const applyCoupon = (code: string) => {
-    const clean = code.trim().toUpperCase();
-    if (clean === 'PREPAID50' || clean === 'YUSR50' || clean === 'FIRSTDROP') {
-      setCouponCode(clean);
-      return true;
-    }
-    return false;
-  };
-
-  const removeCoupon = () => setCouponCode('');
 
   const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  const discount = couponCode ? 50 : 0;
-  const finalTotal = Math.max(0, subtotal - discount);
 
   return (
     <CartContext.Provider
@@ -116,11 +96,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         clearCart,
         totalCount,
         subtotal,
-        discount,
-        finalTotal,
-        couponCode,
-        applyCoupon,
-        removeCoupon,
       }}
     >
       {children}

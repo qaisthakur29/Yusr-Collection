@@ -13,7 +13,14 @@ import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { TermsPage } from './pages/TermsPage';
 import { TrackOrderPage } from './pages/TrackOrderPage';
 import { ContactPage } from './pages/ContactPage';
-import { Product, PRODUCTS } from './data/products';
+import { AdminPage } from './pages/AdminPage';
+import { Product, fetchProductBySlug, fetchProductsFromDB } from './data/products';
+
+function productSlugFromPath(path: string): string | null {
+  if (!path.startsWith('/product/')) return null;
+  const slug = decodeURIComponent(path.slice('/product/'.length).split('/')[0] || '').trim();
+  return slug || null;
+}
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState<string>(() => {
@@ -24,29 +31,65 @@ export default function App() {
     return '/';
   });
 
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(() => {
-    if (typeof window !== 'undefined') {
-      const path = window.location.pathname;
-      if (path.startsWith('/product/')) {
-        const slug = path.replace('/product/', '');
-        return PRODUCTS.find((p) => p.slug === slug) || null;
-      }
+  const [catalog, setCatalog] = useState<Product[]>([]);
+  const [catalogReady, setCatalogReady] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productStatus, setProductStatus] = useState<'idle' | 'loading' | 'missing'>('idle');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchProductsFromDB().then((products) => {
+      if (cancelled) return;
+      setCatalog(products);
+      setCatalogReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const slug = productSlugFromPath(currentPath);
+    if (!slug) {
+      setSelectedProduct(null);
+      setProductStatus('idle');
+      return;
     }
-    return null;
-  });
+
+    const fromCatalog = catalog.find((p) => p.slug === slug);
+    if (fromCatalog) {
+      setSelectedProduct(fromCatalog);
+      setProductStatus('idle');
+      return;
+    }
+
+    if (selectedProduct?.slug === slug) {
+      setProductStatus('idle');
+      return;
+    }
+
+    let cancelled = false;
+    setProductStatus('loading');
+    fetchProductBySlug(slug).then((product) => {
+      if (cancelled) return;
+      if (product) {
+        setSelectedProduct(product);
+        setProductStatus('idle');
+        return;
+      }
+      setSelectedProduct(null);
+      setProductStatus(catalogReady ? 'missing' : 'loading');
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPath, catalog, catalogReady]);
 
   // Handle browser popstate (back / forward buttons)
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname || '/';
-      setCurrentPath(path);
-      if (path.startsWith('/product/')) {
-        const slug = path.replace('/product/', '');
-        const matched = PRODUCTS.find((p) => p.slug === slug);
-        setSelectedProduct(matched || null);
-      } else {
-        setSelectedProduct(null);
-      }
+      setCurrentPath(window.location.pathname || '/');
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -55,13 +98,6 @@ export default function App() {
 
   const navigateTo = (path: string) => {
     setCurrentPath(path);
-    if (path.startsWith('/product/')) {
-      const slug = path.replace('/product/', '');
-      const matched = PRODUCTS.find((p) => p.slug === slug);
-      setSelectedProduct(matched || null);
-    } else {
-      setSelectedProduct(null);
-    }
 
     try {
       window.history.pushState({}, '', path);
@@ -72,6 +108,7 @@ export default function App() {
 
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
+    setProductStatus('idle');
     const path = `/product/${product.slug}`;
     setCurrentPath(path);
     try {
@@ -81,19 +118,30 @@ export default function App() {
   };
 
   const renderCurrentView = () => {
-    // If a product is selected or path starts with /product/
-    if (selectedProduct || currentPath.startsWith('/product/')) {
-      const targetProduct =
-        selectedProduct ||
-        PRODUCTS.find((p) => p.slug === currentPath.replace('/product/', '')) ||
-        PRODUCTS[0];
+    if (currentPath.startsWith('/product/')) {
+      if (selectedProduct) {
+        return (
+          <ProductDetailPage
+            key={selectedProduct.slug}
+            product={selectedProduct}
+            onNavigate={navigateTo}
+            onBack={() => navigateTo('/shop')}
+          />
+        );
+      }
+
+      if (productStatus === 'missing') {
+        return (
+          <div className="min-h-[40vh] flex items-center justify-center">
+            <p className="text-sm text-[#666666] font-body">Product not found.</p>
+          </div>
+        );
+      }
 
       return (
-        <ProductDetailPage
-          product={targetProduct}
-          onNavigate={navigateTo}
-          onBack={() => navigateTo('/shop')}
-        />
+        <div className="min-h-[40vh] flex items-center justify-center">
+          <p className="text-sm text-[#666666] font-body">Loading...</p>
+        </div>
       );
     }
 
@@ -114,6 +162,8 @@ export default function App() {
         return <TrackOrderPage />;
       case '/contact':
         return <ContactPage />;
+      case '/admin':
+        return <AdminPage />;
       case '/':
       default:
         return <HomePage onNavigate={navigateTo} onSelectProduct={handleSelectProduct} />;
