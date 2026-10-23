@@ -102,3 +102,12 @@ p, span, div, a, li, input, textarea, select {
 ::-webkit-scrollbar-thumb:hover {
   background: #C2A77A;
 }
+
+/* Hide Scrollbar for Horizontal Swipe (Product Cards) */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
