@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Product, SIZE_CHART } from '../data/products';
 import { useCart } from '../context/CartContext';
+import { optimizeImage } from '../lib/image';
 import {
   ShieldCheck,
   Truck,
@@ -105,8 +106,9 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
           <div className="space-y-4">
             <div className="relative aspect-[4/5] w-full bg-[#F5F5F5] border border-[#E5E5E5] overflow-hidden">
               <img
-                src={activeImage}
+                src={optimizeImage(activeImage, 1000)}
                 alt={product.name}
+                loading="lazy"
                 className="w-full h-full object-cover object-center"
                 referrerPolicy="no-referrer"
               />
@@ -131,8 +133,9 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
                     }`}
                   >
                     <img
-                      src={img}
+                      src={optimizeImage(img, 200)}
                       alt={`${product.name} view ${idx + 1}`}
+                      loading="lazy"
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
@@ -454,8 +457,9 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
             {product.size_guide_url ? (
               <div className="mt-4">
                 <img
-                  src={product.size_guide_url}
+                  src={optimizeImage(product.size_guide_url, 1000)}
                   alt={`${product.name} size guide`}
+                  loading="lazy"
                   className="w-full h-auto object-contain bg-[#FBFBFB] border border-[#E5E5E5]"
                   referrerPolicy="no-referrer"
                 />

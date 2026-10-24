@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowRight, Check, ChevronRight } from 'lucide-react';
 import { Product, fetchProductsFromDB } from '../data/products';
 import { useCart } from '../context/CartContext';
+import { optimizeImage } from '../lib/image';
 import { ProductCardImage } from '../components/ProductCardImage';
 
 interface HomePageProps {
@@ -51,8 +52,9 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
       <section className="relative w-full h-[60vh] sm:h-[70vh] md:h-[80vh] min-h-[420px] max-h-[850px] bg-[#121212] overflow-hidden flex flex-col justify-end">
         {/* Full Banner Image with object-top guarantee */}
         <img
-          src="/assets/aistudio/HERO_SECTION_BANNER_83e65a6d.png"
+          src={optimizeImage('/assets/aistudio/HERO_SECTION_BANNER_83e65a6d.png', 1600)}
           alt="Yusr Collection"
+          loading="eager"
           className="absolute inset-0 w-full h-full object-cover object-top select-none pointer-events-none"
           referrerPolicy="no-referrer"
         />

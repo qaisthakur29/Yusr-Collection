@@ -1,5 +1,6 @@
 import React from 'react';
 import { Mail, MessageCircle, ArrowUpRight, ShieldCheck, RefreshCw, Truck } from 'lucide-react';
+import { optimizeImage } from '../lib/image';
 
 interface FooterProps {
   onNavigate: (path: string) => void;
@@ -74,8 +75,9 @@ export function Footer({ onNavigate }: FooterProps) {
               className="inline-block"
             >
               <img
-                src="/assets/aistudio/YUSR_COLLECTION_REMOVED_BG_LOGO_82f5c6c0.png"
+                src={optimizeImage('/assets/aistudio/YUSR_COLLECTION_REMOVED_BG_LOGO_82f5c6c0.png', 200)}
                 alt="Yusr Collection"
+                loading="lazy"
                 className="h-10 w-auto object-contain"
                 referrerPolicy="no-referrer"
               />

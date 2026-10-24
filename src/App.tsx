@@ -1,20 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { CartProvider } from './context/CartContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { CartDrawer } from './components/CartDrawer';
 import { HomePage } from './pages/HomePage';
-import { ShopPage } from './pages/ShopPage';
-import { ProductDetailPage } from './pages/ProductDetailPage';
-import { AboutPage } from './pages/AboutPage';
-import { ReturnsPage } from './pages/ReturnsPage';
-import { FaqPage } from './pages/FaqPage';
-import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
-import { TermsPage } from './pages/TermsPage';
-import { TrackOrderPage } from './pages/TrackOrderPage';
-import { ContactPage } from './pages/ContactPage';
-import { AdminPage } from './pages/AdminPage';
 import { Product, fetchProductBySlug, fetchProductsFromDB } from './data/products';
+
+// Only the landing page is part of the initial bundle; every other route is
+// downloaded on demand so the first paint stays fast.
+const ShopPage = lazy(() => import('./pages/ShopPage').then((m) => ({ default: m.ShopPage })));
+const ProductDetailPage = lazy(() =>
+  import('./pages/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })),
+);
+const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })));
+const ReturnsPage = lazy(() =>
+  import('./pages/ReturnsPage').then((m) => ({ default: m.ReturnsPage })),
+);
+const FaqPage = lazy(() => import('./pages/FaqPage').then((m) => ({ default: m.FaqPage })));
+const PrivacyPolicyPage = lazy(() =>
+  import('./pages/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage })),
+);
+const TermsPage = lazy(() => import('./pages/TermsPage').then((m) => ({ default: m.TermsPage })));
+const TrackOrderPage = lazy(() =>
+  import('./pages/TrackOrderPage').then((m) => ({ default: m.TrackOrderPage })),
+);
+const ContactPage = lazy(() =>
+  import('./pages/ContactPage').then((m) => ({ default: m.ContactPage })),
+);
+const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })));
 
 function productSlugFromPath(path: string): string | null {
   if (!path.startsWith('/product/')) return null;
@@ -177,7 +190,17 @@ export default function App() {
         <Navbar currentPath={currentPath} onNavigate={navigateTo} />
 
         {/* Dynamic Page Outlet */}
-        <main className="flex-1">{renderCurrentView()}</main>
+        <main className="flex-1">
+          <Suspense
+            fallback={
+              <div className="min-h-[40vh] flex items-center justify-center">
+                <p className="text-sm text-[#666666] font-body">Loading...</p>
+              </div>
+            }
+          >
+            {renderCurrentView()}
+          </Suspense>
+        </main>
 
         {/* Global Slide-Over Cart Drawer */}
         <CartDrawer />

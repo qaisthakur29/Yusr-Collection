@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Product } from '../data/products';
+import { optimizeImage } from '../lib/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ProductCardImageProps {
@@ -58,8 +59,9 @@ export function ProductCardImage({ product, children }: ProductCardImageProps) {
         {allImages.map((img, idx) => (
           <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
             <img
-              src={img}
+              src={optimizeImage(img)}
               alt={`${product.name} ${idx + 1}`}
+              loading="lazy"
               referrerPolicy="no-referrer"
               className={`w-full h-full object-cover transition-transform duration-300 ease-out ${
                 isHovered ? 'scale-105' : 'scale-100'

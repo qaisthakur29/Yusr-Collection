@@ -2,6 +2,13 @@ import React, { useState } from 'react';
 import { X, Plus, Minus, Trash2, ArrowRight, ShieldCheck, Check, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabaseClient';
+import { optimizeImage } from '../lib/image';
+
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, unknown>) => { open: () => void };
+  }
+}
 
 export function CartDrawer() {
   const {
@@ -48,40 +55,18 @@ export function CartDrawer() {
       .filter(Boolean)
       .join(', ');
 
-    setPlacingOrder(true);
-    setCheckoutError(null);
-
-    const { data: savedOrder, error: insertError } = await supabase
-      .from('orders')
-      .insert({
-        customer_name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        address: fullAddress,
-        total_amount: orderTotal,
-        status: 'Pending',
-      })
-      .select('id')
-      .single();
-
-    setPlacingOrder(false);
-
-    if (insertError || !savedOrder) {
-      setCheckoutError(insertError?.message || 'Could not save this order. Please try again.');
-      return;
-    }
-
     const orderItemsSummary = items
       .map((i) => `• ${i.product.name} (Size: ${i.size}, Qty: ${i.quantity}) - ₹${i.product.price * i.quantity}`)
       .join('\n');
 
-    const orderId = savedOrder.id;
-    const msg = `Salam! I would like to place an order on Yusr Collection:
+    const openWhatsApp = (orderId: string, paymentId?: string) => {
+      const msg = `Salam! I would like to place an order on Yusr Collection:
 
 📦 *Order ID:* ${orderId}
 👤 *Name:* ${formData.name}
 📞 *Phone:* ${formData.phone}
 📍 *Address:* ${fullAddress}
-💳 *Payment:* ${isPrepaid ? 'Prepaid (UPI / NetBanking - ₹50 Off)' : 'Cash on Delivery (COD)'}
+💳 *Payment:* ${isPrepaid ? 'Prepaid (UPI / NetBanking - ₹50 Off)' : 'Cash on Delivery (COD)'}${paymentId ? `\n🧾 *Razorpay Payment ID:* ${paymentId}` : ''}
 
 🛍️ *Items:*
 ${orderItemsSummary}
@@ -90,14 +75,131 @@ ${orderItemsSummary}
 
 Please confirm my order and share payment/tracking details. Alhamdulillah!`;
 
-    const encoded = encodeURIComponent(msg);
-    const waUrl = `https://wa.me/919326184407?text=${encoded}`;
+      window.open(`https://wa.me/919326184407?text=${encodeURIComponent(msg)}`, '_blank');
+    };
 
-    setOrderSuccess(true);
-    setTimeout(() => {
-      window.open(waUrl, '_blank');
-      clearCart();
-    }, 1500);
+    setPlacingOrder(true);
+    setCheckoutError(null);
+
+    // ---------- COD: save the order first, then hand off to WhatsApp ----------
+    if (!isPrepaid) {
+      // The anon role may INSERT but not read rows back (there is no SELECT policy),
+      // so the id is generated client-side and `.select()` is deliberately omitted.
+      const orderId = crypto.randomUUID();
+
+      const { error: insertError } = await supabase.from('orders').insert({
+        id: orderId,
+        customer_name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        address: fullAddress,
+        total_amount: orderTotal,
+        status: 'Pending',
+        payment_method: 'COD',
+      });
+
+      setPlacingOrder(false);
+
+      if (insertError) {
+        setCheckoutError(insertError.message || 'Could not save this order. Please try again.');
+        return;
+      }
+
+      setOrderSuccess(true);
+      setTimeout(() => {
+        openWhatsApp(orderId);
+        clearCart();
+      }, 1500);
+      return;
+    }
+
+    // ---------- Prepaid: create the Razorpay order, save only after payment succeeds ----------
+    // DB prices are numeric and can be fractional, but the Edge Function only
+    // accepts an integer rupee amount.
+    const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+      body: { amount: Math.round(orderTotal) },
+    });
+
+    if (error || !data) {
+      setCheckoutError(error?.message || 'Could not start the payment. Please try again.');
+      setPlacingOrder(false);
+      return;
+    }
+
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount: data.amount,
+      currency: 'INR',
+      name: 'Yusr Collection',
+      description: 'Premium Streetwear',
+      order_id: data.order_id,
+      prefill: {
+        name: formData.name,
+        contact: formData.phone,
+        email: formData.email || '',
+      },
+      theme: { color: '#C2A77A' },
+      handler: async function (response: {
+        razorpay_payment_id: string;
+        razorpay_order_id: string;
+        razorpay_signature: string;
+      }) {
+        // Never trust the browser for payment status: the Edge Function verifies
+        // the HMAC signature and writes the order itself.
+        const { data: verified, error: verifyError } = await supabase.functions.invoke(
+          'verify-razorpay-payment',
+          {
+            body: {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              customer_name: formData.name.trim(),
+              phone: formData.phone.trim(),
+              email: formData.email.trim(),
+              address: fullAddress,
+            },
+          },
+        );
+
+        setPlacingOrder(false);
+
+        if (verifyError || !verified?.success || !verified?.order_id) {
+          setCheckoutError(
+            'We could not verify your payment. If money was deducted, please contact us on WhatsApp.',
+          );
+          return;
+        }
+
+        setOrderSuccess(true);
+        setTimeout(() => {
+          openWhatsApp(verified.order_id, response.razorpay_payment_id);
+          clearCart();
+        }, 1500);
+      },
+      modal: {
+        ondismiss: function () {
+          setPlacingOrder(false); // Stop loading state if user cancels
+          setCheckoutError('Payment cancelled. You can try again.');
+        },
+      },
+    };
+
+    // checkout.js is loaded from a CDN, so ad-blockers or a network failure can
+    // leave window.Razorpay undefined. Without this guard the submit button
+    // would stay stuck on its loading state forever.
+    if (typeof window.Razorpay !== 'function') {
+      setCheckoutError('Payment gateway blocked by browser. Please disable ad-blockers.');
+      setPlacingOrder(false);
+      return;
+    }
+
+    try {
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch {
+      setCheckoutError('Payment gateway blocked by browser. Please disable ad-blockers.');
+      setPlacingOrder(false);
+    }
   };
 
   return (
@@ -360,8 +462,9 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                 {items.map((item) => (
                   <div key={`${item.product.id}-${item.size}`} className="pt-4 first:pt-0 flex gap-4">
                     <img
-                      src={item.product.image}
+                      src={optimizeImage(item.product.image, 200)}
                       alt={item.product.name}
+                      loading="lazy"
                       referrerPolicy="no-referrer"
                       className="w-20 h-24 object-cover bg-[#F8F8F8] shrink-0 border border-[#E5E5E5]"
                     />
