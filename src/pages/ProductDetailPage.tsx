@@ -155,7 +155,7 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
                 <span className="text-[11px] text-[#666666]">Zero Distortion</span>
               </div>
               <div>
-                <span className="block font-heading font-bold text-[#1A1A1A] uppercase">DTF Print</span>
+                <span className="block font-heading font-bold text-[#1A1A1A] uppercase">DTG Print</span>
                 <span className="text-[11px] text-[#666666]">Fade Resistant</span>
               </div>
             </div>
