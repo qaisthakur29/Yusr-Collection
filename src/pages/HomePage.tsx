@@ -19,7 +19,7 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
 
   useEffect(() => {
     let cancelled = false;
-    fetchProductsFromDB().then((data) => {
+    fetchProductsFromDB({ limit: 10 }).then((data) => {
       if (cancelled) return;
       setProducts(data);
       setLoading(false);
@@ -52,9 +52,13 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
       <section className="relative w-full h-[60vh] sm:h-[70vh] md:h-[80vh] min-h-[420px] max-h-[850px] bg-[#121212] overflow-hidden flex flex-col justify-end">
         {/* Full Banner Image with object-top guarantee */}
         <img
-          src={optimizeImage('/assets/aistudio/HERO_SECTION_BANNER_83e65a6d.png', 1600)}
+          src={optimizeImage('/assets/aistudio/HERO_SECTION_BANNER_83e65a6d.jpg', 1600)}
           alt="Yusr Collection"
           loading="eager"
+          decoding="async"
+          fetchPriority="high"
+          width={1678}
+          height={937}
           className="absolute inset-0 w-full h-full object-cover object-top select-none pointer-events-none"
           referrerPolicy="no-referrer"
         />

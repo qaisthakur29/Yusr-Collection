@@ -109,6 +109,7 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
                 src={optimizeImage(activeImage, 1000)}
                 alt={product.name}
                 loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover object-center"
                 referrerPolicy="no-referrer"
               />
@@ -136,6 +137,7 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
                       src={optimizeImage(img, 200)}
                       alt={`${product.name} view ${idx + 1}`}
                       loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
@@ -460,6 +462,7 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
                   src={optimizeImage(product.size_guide_url, 1000)}
                   alt={`${product.name} size guide`}
                   loading="lazy"
+                  decoding="async"
                   className="w-full h-auto object-contain bg-[#FBFBFB] border border-[#E5E5E5]"
                   referrerPolicy="no-referrer"
                 />

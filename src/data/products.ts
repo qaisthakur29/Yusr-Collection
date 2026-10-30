@@ -71,11 +71,51 @@ function mapRowToProduct(row: ProductRow): Product {
 const PRODUCT_COLUMNS =
   'id, slug, name, subname, price, mrp, image, gallery, sizes, description, category, fabric, fit, tag, badge, details, size_guide_url';
 
-export async function fetchProductsFromDB(): Promise<Product[]> {
-  const { data, error } = await supabase
-    .from('products')
-    .select(PRODUCT_COLUMNS)
-    .order('created_at', { ascending: true });
+export type ProductSort = 'featured' | 'price-asc' | 'price-desc';
+
+export interface FetchProductsOptions {
+  limit?: number;
+  offset?: number;
+  category?: string | null;
+  sort?: ProductSort;
+}
+
+// Every sort mode falls back to created_at so ties never reorder between loads.
+const SORT_ORDER: Record<ProductSort, { column: string; ascending: boolean }[]> = {
+  featured: [
+    { column: 'sort_order', ascending: true },
+    { column: 'created_at', ascending: true },
+  ],
+  'price-asc': [
+    { column: 'price', ascending: true },
+    { column: 'created_at', ascending: true },
+  ],
+  'price-desc': [
+    { column: 'price', ascending: false },
+    { column: 'created_at', ascending: true },
+  ],
+};
+
+export async function fetchProductsFromDB(options: FetchProductsOptions = {}): Promise<Product[]> {
+  const { limit, offset = 0, category, sort = 'featured' } = options;
+  const order = SORT_ORDER[sort] ?? SORT_ORDER.featured;
+
+  let query = supabase.from('products').select(PRODUCT_COLUMNS);
+
+  // PostgREST applies .order() clauses in the sequence they are chained.
+  for (const clause of order) {
+    query = query.order(clause.column, { ascending: clause.ascending });
+  }
+
+  if (category && category !== 'All') {
+    query = query.eq('category', category);
+  }
+
+  if (typeof limit === 'number') {
+    query = query.range(offset, offset + limit - 1);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Failed to fetch products:', error.message);
@@ -83,6 +123,40 @@ export async function fetchProductsFromDB(): Promise<Product[]> {
   }
 
   return ((data as ProductRow[]) ?? []).map(mapRowToProduct);
+}
+
+/**
+ * Total number of products, optionally scoped to a single category.
+ * Uses a HEAD request (count only) so no rows travel over the wire.
+ */
+export async function fetchProductsCount(category?: string | null): Promise<number> {
+  let query = supabase.from('products').select('id', { count: 'exact', head: true });
+
+  if (category && category !== 'All') {
+    query = query.eq('category', category);
+  }
+
+  const { count, error } = await query;
+
+  if (error) {
+    console.error('Failed to count products:', error.message);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+export async function fetchProductCategories(): Promise<string[]> {
+  const { data, error } = await supabase.from('products').select('category').order('category');
+
+  if (error) {
+    console.error('Failed to fetch categories:', error.message);
+    return [];
+  }
+
+  return Array.from(
+    new Set(((data as { category: string | null }[]) ?? []).map((row) => row.category).filter(Boolean)),
+  ) as string[];
 }
 
 export async function fetchProductBySlug(slug: string): Promise<Product | null> {

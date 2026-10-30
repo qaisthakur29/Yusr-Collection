@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { LayoutDashboard, LogOut, Package, ShoppingCart } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
 type AdminProduct = {
@@ -17,6 +18,7 @@ type AdminProduct = {
   fit: string;
   details: string[];
   size_guide_url: string | null;
+  sort_order: number;
 };
 
 type AdminOrder = {
@@ -32,7 +34,13 @@ type AdminOrder = {
   created_at: string;
 };
 
-type AdminTab = 'products' | 'orders';
+type AdminTab = 'dashboard' | 'products' | 'orders';
+
+const NAV_ITEMS: { id: AdminTab; label: string; Icon: typeof Package }[] = [
+  { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+  { id: 'products', label: 'Products', Icon: Package },
+  { id: 'orders', label: 'Orders', Icon: ShoppingCart },
+];
 
 const emptyForm = {
   name: '',
@@ -49,10 +57,54 @@ const emptyForm = {
   fit: '',
   details: '',
   size_guide_url: '',
+  sort_order: '0',
 };
 
 function splitCsv(value: string): string[] {
   return value.split(',').map((part) => part.trim()).filter(Boolean);
+}
+
+// `functions.invoke` swallows the real reason behind a generic
+// "Failed to send a request to the Edge Function" string, which makes a bad
+// payload indistinguishable from a CORS/network failure. Unpack it:
+//   - FunctionsHttpError  -> non-2xx; the JSON body is in `error.context` (a Response)
+//   - FunctionsFetchError -> fetch() itself rejected (offline, blocked, CORS preflight)
+//   - FunctionsRelayError -> the Supabase relay refused the call
+async function functionErrorMessage(error: unknown, data: unknown): Promise<string> {
+  console.error('Edge Function call failed', { error, data });
+
+  // A 2xx response that still carries an application-level error.
+  const embedded = (data as { error?: unknown } | null)?.error;
+  if (typeof embedded === 'string' && embedded) return embedded;
+
+  if (!error) return 'Unexpected Edge Function error';
+
+  const name = (error as { name?: string }).name ?? '';
+  const context = (error as { context?: unknown }).context;
+
+  if (context instanceof Response) {
+    const raw = await context.text().catch(() => '');
+    let detail = raw;
+    try {
+      const body = JSON.parse(raw) as { error?: unknown; message?: unknown };
+      const message = body?.error ?? body?.message;
+      if (typeof message === 'string' && message) detail = message;
+    } catch {
+      // Not JSON — fall back to the raw body text.
+    }
+
+    const seen = detail.trim().slice(0, 300);
+    return seen
+      ? `Edge Function returned ${context.status}: ${seen}`
+      : `Edge Function returned ${context.status}`;
+  }
+
+  if (name === 'FunctionsFetchError') {
+    return 'Could not reach the Edge Function — the request never left the browser (offline, blocked, or a CORS preflight failure). Check the browser console and network tab.';
+  }
+
+  const message = (error as { message?: string }).message;
+  return message || 'Unexpected Edge Function error';
 }
 
 type GateState = 'checking' | 'locked' | 'granted';
@@ -63,7 +115,7 @@ export function AdminPage() {
   const [password, setPassword] = useState('');
   const [signingIn, setSigningIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [tab, setTab] = useState<AdminTab>('products');
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [products, setProducts] = useState<AdminProduct[]>([]);
@@ -127,10 +179,12 @@ export function AdminPage() {
   };
 
   const fetchProducts = useCallback(async () => {
+    // Mirror the storefront ordering so the Sort Order column reads top-to-bottom.
     const { data, error: fetchError } = await supabase
       .from('products')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true });
 
     if (fetchError) {
       setError(fetchError.message);
@@ -146,12 +200,8 @@ export function AdminPage() {
     });
 
     setOrdersLoading(false);
-    if (fnError) {
-      setError(fnError.message);
-      return;
-    }
-    if (data?.error) {
-      setError(data.error);
+    if (fnError || data?.error) {
+      setError(await functionErrorMessage(fnError, data));
       return;
     }
     setOrders((data?.orders as AdminOrder[]) ?? []);
@@ -161,9 +211,12 @@ export function AdminPage() {
     if (gate === 'granted') void fetchProducts();
   }, [gate, fetchProducts]);
 
+  // Orders are needed both by the Orders view and by the Dashboard counters.
   useEffect(() => {
-    if (gate === 'granted' && tab === 'orders') void fetchOrders();
-  }, [gate, tab, fetchOrders]);
+    if (gate === 'granted' && (activeTab === 'orders' || activeTab === 'dashboard')) {
+      void fetchOrders();
+    }
+  }, [gate, activeTab, fetchOrders]);
 
   const resetForm = () => {
     setForm(emptyForm);
@@ -202,6 +255,7 @@ export function AdminPage() {
       fit: product.fit,
       details: (product.details ?? []).join(', '),
       size_guide_url: product.size_guide_url ?? '',
+      sort_order: String(product.sort_order ?? 0),
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -227,6 +281,7 @@ export function AdminPage() {
       fit: form.fit.trim(),
       details: splitCsv(form.details),
       size_guide_url: form.size_guide_url.trim() || null,
+      sort_order: Math.trunc(Number(form.sort_order) || 0),
     };
 
     const { data: saveResult, error: saveError } = await supabase.functions.invoke('manage-products', {
@@ -238,8 +293,9 @@ export function AdminPage() {
     });
 
     setSaving(false);
-    if (saveError) return setError(saveError.message);
-    if (saveResult?.error) return setError(saveResult.error);
+    if (saveError || saveResult?.error) {
+      return setError(await functionErrorMessage(saveError, saveResult));
+    }
 
     setStatus(editingId ? `Updated ${payload.name}` : `Added ${payload.name}`);
     resetForm();
@@ -251,8 +307,7 @@ export function AdminPage() {
     const { data, error: fnError } = await supabase.functions.invoke('manage-products', {
       body: { action: 'delete', id },
     });
-    if (fnError) return setError(fnError.message);
-    if (data?.error) return setError(data.error);
+    if (fnError || data?.error) return setError(await functionErrorMessage(fnError, data));
     setStatus('Product deleted');
     await fetchProducts();
   };
@@ -263,8 +318,7 @@ export function AdminPage() {
       body: { action: 'dispatch', id },
     });
     setDispatchingId(null);
-    if (fnError) return setError(fnError.message);
-    if (data?.error) return setError(data.error);
+    if (fnError || data?.error) return setError(await functionErrorMessage(fnError, data));
     setStatus('Order marked as dispatched');
     await fetchOrders();
   };
@@ -276,8 +330,7 @@ export function AdminPage() {
       body: { action: 'delete', id },
     });
     setDeletingOrderId(null);
-    if (fnError) return setError(fnError.message);
-    if (data?.error) return setError(data.error);
+    if (fnError || data?.error) return setError(await functionErrorMessage(fnError, data));
     setStatus('Order deleted');
     await fetchOrders();
   };
@@ -327,36 +380,76 @@ export function AdminPage() {
   }
 
   return (
-    <div className="bg-white min-h-screen py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="font-heading font-extrabold text-3xl uppercase">Admin Dashboard</h1>
+    <div className="flex h-screen bg-[#F9F9F9]">
+      <aside className="w-64 shrink-0 h-full bg-white border-r border-[#E5E5E5] flex flex-col">
+        <div className="px-6 py-6 border-b border-[#E5E5E5]">
+          <h1 className="font-heading font-extrabold text-lg uppercase tracking-tight">YUSR ADMIN</h1>
+        </div>
+
+        <nav className="flex-1 p-3 space-y-1">
+          {NAV_ITEMS.map(({ id, label, Icon }) => {
+            const active = activeTab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold border-l-2 transition-colors ${
+                  active
+                    ? 'bg-[#1A1A1A] text-white border-[#C2A77A]'
+                    : 'border-transparent text-[#555555] hover:bg-[#F9F9F9] hover:text-[#1A1A1A]'
+                }`}
+              >
+                <Icon size={18} strokeWidth={1.75} />
+                {label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="p-3 border-t border-[#E5E5E5]">
           <button
             onClick={handleSignOut}
-            className="px-4 py-2 border border-[#E5E5E5] text-xs font-bold uppercase tracking-wider hover:border-[#1A1A1A]"
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-[#555555] hover:bg-[#F9F9F9] hover:text-[#1A1A1A]"
           >
+            <LogOut size={18} strokeWidth={1.75} />
             Sign Out
           </button>
         </div>
+      </aside>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-8">
-          {['products', 'orders'].map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t as AdminTab)}
-              className={`px-6 py-2 text-xs font-bold uppercase tracking-wider ${tab === t ? 'bg-[#1A1A1A] text-white' : 'border border-[#E5E5E5]'}`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-
+      <main className="flex-1 h-full overflow-y-auto p-8">
         {error && <p className="mb-4 text-red-600 text-sm">{error}</p>}
         {status && <p className="mb-4 text-green-700 text-sm">{status}</p>}
 
-        {tab === 'orders' ? (
-          <div className="overflow-x-auto border border-[#E5E5E5]">
+        {activeTab === 'dashboard' && (
+          <div>
+            <h2 className="font-heading font-extrabold text-2xl uppercase mb-1">Dashboard</h2>
+            <p className="text-sm text-[#666666] mb-8">Welcome back to Yusr Collection.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+              <div className="bg-white border border-[#E5E5E5] p-6">
+                <div className="flex items-center gap-2 text-[#666666] mb-3">
+                  <Package size={16} strokeWidth={1.75} />
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Total Products</span>
+                </div>
+                <p className="font-heading font-extrabold text-3xl tabular-nums">{products.length}</p>
+              </div>
+
+              <div className="bg-white border border-[#E5E5E5] p-6">
+                <div className="flex items-center gap-2 text-[#666666] mb-3">
+                  <ShoppingCart size={16} strokeWidth={1.75} />
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Total Orders</span>
+                </div>
+                <p className="font-heading font-extrabold text-3xl tabular-nums">
+                  {ordersLoading ? '—' : orders.length}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'orders' && (
+          <div className="overflow-x-auto border border-[#E5E5E5] bg-white">
             <table className="w-full text-left text-sm">
               <thead className="bg-[#FBFBFB] uppercase text-xs">
                 <tr>
@@ -392,9 +485,11 @@ export function AdminPage() {
               </tbody>
             </table>
           </div>
-        ) : (
+        )}
+
+        {activeTab === 'products' && (
           <>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12 p-6 border border-[#E5E5E5]">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12 p-6 border border-[#E5E5E5] bg-white">
               
               <Field label="Name"><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} /></Field>
               <Field label="Slug"><input required value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className={inputClass} /></Field>
@@ -431,6 +526,17 @@ export function AdminPage() {
 
               <Field label="Price"><input required type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className={inputClass} /></Field>
               <Field label="MRP"><input required type="number" value={form.mrp} onChange={(e) => setForm({ ...form, mrp: e.target.value })} className={inputClass} /></Field>
+              <Field label="Sort Order (Position)">
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.sort_order}
+                  onChange={(e) => setForm({ ...form, sort_order: e.target.value })}
+                  className={inputClass}
+                  placeholder="1 = Top, 2 = Second…"
+                />
+              </Field>
               
               <Field label="Image (URL)" className="sm:col-span-2"><input required value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} className={inputClass} /></Field>
               <Field label="Gallery Image URLs (Comma Separated)" className="sm:col-span-2"><textarea rows={2} value={form.gallery} onChange={(e) => setForm({ ...form, gallery: e.target.value })} className={inputClass} /></Field>
@@ -450,10 +556,10 @@ export function AdminPage() {
               </div>
             </form>
 
-            <div className="overflow-x-auto border border-[#E5E5E5]">
+            <div className="overflow-x-auto border border-[#E5E5E5] bg-white">
               <table className="w-full text-left text-sm">
                 <thead className="bg-[#FBFBFB] uppercase text-xs">
-                  <tr><th className="p-3">Name</th><th className="p-3">Category</th><th className="p-3">Price</th><th className="p-3 text-right">Actions</th></tr>
+                  <tr><th className="p-3">Name</th><th className="p-3">Category</th><th className="p-3">Price</th><th className="p-3">Sort Order</th><th className="p-3 text-right">Actions</th></tr>
                 </thead>
                 <tbody>
                   {products.map((p) => (
@@ -461,6 +567,7 @@ export function AdminPage() {
                       <td className="p-3">{p.name}</td>
                       <td className="p-3">{p.category}</td>
                       <td className="p-3">₹{p.price}</td>
+                      <td className="p-3 tabular-nums">{p.sort_order}</td>
                       <td className="p-3 text-right flex justify-end gap-2">
                         <button onClick={() => handleEdit(p)} className="px-3 py-1 border text-xs uppercase hover:border-black">Edit</button>
                         <button onClick={() => handleDelete(p.id)} className="px-3 py-1 border text-red-600 text-xs uppercase hover:bg-red-50">Delete</button>
@@ -472,7 +579,7 @@ export function AdminPage() {
             </div>
           </>
         )}
-      </div>
+      </main>
 
       {selectedOrder && (
         <div

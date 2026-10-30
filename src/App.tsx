@@ -193,7 +193,12 @@ export default function App() {
         <main className="flex-1">
           <Suspense
             fallback={
-              <div className="min-h-[40vh] flex items-center justify-center">
+              <div className="min-h-[40vh] flex flex-col items-center justify-center gap-3">
+                <div
+                  className="w-8 h-8 border-2 border-[#E5E5E5] border-t-[#C2A77A] rounded-full animate-spin"
+                  role="status"
+                  aria-label="Loading"
+                />
                 <p className="text-sm text-[#666666] font-body">Loading...</p>
               </div>
             }

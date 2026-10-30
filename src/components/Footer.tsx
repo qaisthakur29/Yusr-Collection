@@ -78,6 +78,7 @@ export function Footer({ onNavigate }: FooterProps) {
                 src={optimizeImage('/assets/aistudio/YUSR_COLLECTION_REMOVED_BG_LOGO_82f5c6c0.png', 200)}
                 alt="Yusr Collection"
                 loading="lazy"
+                decoding="async"
                 className="h-10 w-auto object-contain"
                 referrerPolicy="no-referrer"
               />

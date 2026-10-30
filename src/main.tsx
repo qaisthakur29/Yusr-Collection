@@ -1,5 +1,6 @@
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
+import { fetchProductsFromDB } from './data/products';
 import './index.css';
 
 // A new deploy replaces the hashed route chunks, so a visitor who still has the
@@ -23,4 +24,17 @@ try {
   sessionStorage.removeItem('yusr_chunk_reload');
 } catch {
   // Ignore: the guard simply stays in place for this session.
+}
+
+// Warm the Shop route as soon as the browser is idle, so the catalog is already
+// cached (JS chunk + product data) by the time the visitor clicks "Shop".
+const prefetchShop = () => {
+  void import('./pages/ShopPage');
+  void fetchProductsFromDB({ limit: 10 });
+};
+
+if (typeof requestIdleCallback === 'function') {
+  requestIdleCallback(prefetchShop, { timeout: 3000 });
+} else {
+  window.setTimeout(prefetchShop, 2000);
 }

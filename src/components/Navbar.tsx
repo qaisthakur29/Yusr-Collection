@@ -80,6 +80,7 @@ export function Navbar({ currentPath, onNavigate }: NavbarProps) {
                 src={optimizeImage('/assets/aistudio/YUSR_COLLECTION_REMOVED_BG_LOGO_82f5c6c0.png', 200)}
                 alt="Yusr Collection"
                 loading="lazy"
+                decoding="async"
                 className="h-9 sm:h-11 w-auto object-contain transition-transform group-hover:scale-[1.02]"
                 referrerPolicy="no-referrer"
               />
@@ -123,6 +124,7 @@ export function Navbar({ currentPath, onNavigate }: NavbarProps) {
                     src={optimizeImage('/assets/aistudio/YUSR_COLLECTION_REMOVED_BG_LOGO_82f5c6c0.png', 200)}
                     alt="Yusr Collection"
                     loading="lazy"
+                    decoding="async"
                     className="h-8 w-auto object-contain"
                   />
                   <button

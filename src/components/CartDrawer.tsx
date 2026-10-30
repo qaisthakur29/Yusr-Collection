@@ -465,6 +465,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                       src={optimizeImage(item.product.image, 200)}
                       alt={item.product.name}
                       loading="lazy"
+                      decoding="async"
                       referrerPolicy="no-referrer"
                       className="w-20 h-24 object-cover bg-[#F8F8F8] shrink-0 border border-[#E5E5E5]"
                     />

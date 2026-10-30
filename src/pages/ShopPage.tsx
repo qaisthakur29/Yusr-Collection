@@ -1,41 +1,73 @@
 import React, { useEffect, useState } from 'react';
-import { Product, fetchProductsFromDB } from '../data/products';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Product,
+  ProductSort,
+  fetchProductsFromDB,
+  fetchProductsCount,
+  fetchProductCategories,
+} from '../data/products';
 import { useCart } from '../context/CartContext';
 import { ProductCardImage } from '../components/ProductCardImage';
+
+const PAGE_SIZE = 8;
 
 interface ShopPageProps {
   onSelectProduct: (product: Product) => void;
   onNavigate: (path: string) => void;
 }
 
-export function ShopPage({ onSelectProduct, onNavigate }: ShopPageProps) {
+export function ShopPage({ onSelectProduct }: ShopPageProps) {
   const { addToCart } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc'>('featured');
+  const [sortBy, setSortBy] = useState<ProductSort>('featured');
   const [selectedSizes, setSelectedSizes] = useState<Record<string, 'S' | 'M' | 'L' | 'XL' | 'XXL'>>({});
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  // Categories only need to be fetched once.
   useEffect(() => {
     let cancelled = false;
-    fetchProductsFromDB().then((data) => {
-      if (cancelled) return;
-      setProducts(data);
-      setLoading(false);
+    fetchProductCategories().then((data) => {
+      if (!cancelled) setCategories(data);
     });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const filteredProducts = products.filter((p) => {
-    if (selectedCategory === 'All') return true;
-    return p.category === selectedCategory;
-  }).sort((a, b) => {
-    if (sortBy === 'price-asc') return a.price - b.price;
-    if (sortBy === 'price-desc') return b.price - a.price;
-    return 0;
-  });
+  // Changing the filter or sort starts a new result set, so go back to page 1.
+  useEffect(() => {
+    setPage(0);
+  }, [selectedCategory, sortBy]);
+
+  // Fetch only the current page of products, plus the matching total for the pager.
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      fetchProductsFromDB({
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+        category: selectedCategory,
+        sort: sortBy,
+      }),
+      fetchProductsCount(selectedCategory),
+    ]).then(([items, count]) => {
+      if (cancelled) return;
+      setProducts(items);
+      setTotalCount(count);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCategory, sortBy, page]);
 
   const handleQuickAdd = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -62,7 +94,8 @@ export function ShopPage({ onSelectProduct, onNavigate }: ShopPageProps) {
           </div>
 
           <div className="text-xs text-[#666666] font-heading font-medium">
-            Showing <span className="font-bold text-[#1A1A1A]">{filteredProducts.length}</span> pieces
+            Showing <span className="font-bold text-[#1A1A1A]">{products.length}</span> of{' '}
+            <span className="font-bold text-[#1A1A1A]">{totalCount}</span> pieces
           </div>
         </div>
 
@@ -71,7 +104,7 @@ export function ShopPage({ onSelectProduct, onNavigate }: ShopPageProps) {
           
           {/* Category Tabs */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
-            {['All', ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))].map((cat) => (
+            {['All', ...categories].map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
@@ -91,7 +124,7 @@ export function ShopPage({ onSelectProduct, onNavigate }: ShopPageProps) {
             <span className="text-xs text-[#666666] font-heading uppercase hidden sm:inline">Sort:</span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as ProductSort)}
               className="min-h-[40px] px-3 py-1.5 border border-[#E5E5E5] bg-white text-xs font-heading font-semibold uppercase text-[#1A1A1A] focus:outline-none focus:border-[#C2A77A]"
             >
               <option value="featured">Featured Drop</option>
@@ -103,10 +136,18 @@ export function ShopPage({ onSelectProduct, onNavigate }: ShopPageProps) {
 
         {/* Product Grid: 2 columns on mobile, 4 on desktop */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-          {loading ? (
-            <p className="col-span-2 md:col-span-4 text-sm text-[#666666] font-body">Loading...</p>
-          ) : null}
-          {(loading ? [] : filteredProducts).map((product) => {
+          {loading
+            ? Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                <div key={`skeleton-${i}`} className="flex flex-col" aria-hidden="true">
+                  <div className="w-full aspect-[4/5] bg-[#F0F0F0] animate-pulse" />
+                  <div className="pt-3 space-y-2">
+                    <div className="h-3 w-1/3 bg-[#F0F0F0] animate-pulse" />
+                    <div className="h-4 w-3/4 bg-[#F0F0F0] animate-pulse" />
+                    <div className="h-5 w-1/2 bg-[#F0F0F0] animate-pulse" />
+                  </div>
+                </div>
+              ))
+            : products.map((product) => {
             const currentSize = selectedSizes[product.id] || 'L';
             return (
               <div
@@ -191,6 +232,51 @@ export function ShopPage({ onSelectProduct, onNavigate }: ShopPageProps) {
             );
           })}
         </div>
+
+        {/* Empty state */}
+        {!loading && products.length === 0 && (
+          <p className="text-center text-sm text-[#666666] font-body py-16">
+            No pieces found in this collection.
+          </p>
+        )}
+
+        {/* Pagination */}
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 mt-12">
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              aria-label="Previous page"
+              className="min-h-[40px] min-w-[40px] flex items-center justify-center border border-[#E5E5E5] bg-white text-[#1A1A1A] disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#1A1A1A] transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setPage(i)}
+                aria-current={page === i ? 'page' : undefined}
+                className={`min-h-[40px] min-w-[40px] px-3 text-xs font-heading font-semibold tabular-nums transition-colors ${
+                  page === i
+                    ? 'bg-[#1A1A1A] text-white'
+                    : 'bg-white text-[#666666] border border-[#E5E5E5] hover:text-[#1A1A1A]'
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              aria-label="Next page"
+              className="min-h-[40px] min-w-[40px] flex items-center justify-center border border-[#E5E5E5] bg-white text-[#1A1A1A] disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#1A1A1A] transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

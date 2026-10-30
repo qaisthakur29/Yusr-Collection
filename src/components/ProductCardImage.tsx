@@ -62,6 +62,7 @@ export function ProductCardImage({ product, children }: ProductCardImageProps) {
               src={optimizeImage(img)}
               alt={`${product.name} ${idx + 1}`}
               loading="lazy"
+              decoding="async"
               referrerPolicy="no-referrer"
               className={`w-full h-full object-cover transition-transform duration-300 ease-out ${
                 isHovered ? 'scale-105' : 'scale-100'

@@ -26,23 +26,30 @@ const TEXT_FIELDS = [
 ] as const;
 
 const NUMBER_FIELDS = ['price', 'mrp'] as const;
+const INTEGER_FIELDS = ['sort_order'] as const;
 const ARRAY_FIELDS = ['gallery', 'sizes', 'details'] as const;
 
+// Headers the Supabase JS SDK may send on an `functions.invoke` call. Kept in
+// sync with @supabase/supabase-js/cors — a missing entry makes the browser fail
+// the preflight and the call rejects with "Failed to send a request".
+const ALLOW_HEADERS =
+  'authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage';
+
+// This function is authorised by a Bearer JWT (see authorizeAdmin), not by CORS.
+// Browsers never attach that token automatically, so reflecting the caller's
+// Origin cannot be used for CSRF. Reflecting is also required because the admin
+// panel is served from several origins (localhost ports, Vercel preview URLs,
+// production): echoing a *different* origin makes the browser silently drop the
+// request, which surfaces only as the misleading "Failed to send a request to
+// the Edge Function" instead of a readable authorization error.
 function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin') ?? '';
-  const allowed = (Deno.env.get('ALLOWED_ORIGINS') ?? '*')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean);
 
   return {
-    'Access-Control-Allow-Origin': allowed.includes('*')
-      ? origin || '*'
-      : allowed.includes(origin)
-        ? origin
-        : allowed[0],
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Headers': ALLOW_HEADERS,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
 }
@@ -120,6 +127,14 @@ function sanitizeProduct(input: unknown): Record<string, unknown> | null {
     if (!(field in src)) continue;
     const value = Number(src[field]);
     if (!Number.isFinite(value) || value < 0) return null;
+    out[field] = value;
+  }
+
+  // Display position: whole numbers only, so the admin list stays predictable.
+  for (const field of INTEGER_FIELDS) {
+    if (!(field in src)) continue;
+    const value = Number(src[field]);
+    if (!Number.isInteger(value) || value < 0) return null;
     out[field] = value;
   }
 
