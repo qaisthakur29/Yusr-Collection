@@ -3,6 +3,7 @@ import { X, Plus, Minus, Trash2, ArrowRight, ShieldCheck, Check, ShoppingBag } f
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabaseClient';
 import { optimizeImage } from '../lib/image';
+import { trackInitiateCheckout, trackPurchase, type PixelLine } from '../lib/metaPixel';
 
 declare global {
   interface Window {
@@ -42,6 +43,13 @@ export function CartDrawer() {
   const isPrepaid = formData.paymentMethod === 'prepaid';
   const prepaidDiscount = isPrepaid ? 50 : 0;
   const orderTotal = Math.max(0, subtotal - prepaidDiscount);
+
+  const pixelLines: PixelLine[] = items.map((item) => ({
+    id: item.product.id,
+    name: item.product.name,
+    price: item.product.price,
+    quantity: item.quantity,
+  }));
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,6 +114,8 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
       }
 
       setOrderSuccess(true);
+      // Order row is in Supabase and COD is confirmed, so this counts as a sale.
+      trackPurchase(pixelLines, orderTotal);
       setTimeout(() => {
         openWhatsApp(orderId);
         clearCart();
@@ -171,6 +181,8 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
         }
 
         setOrderSuccess(true);
+        // Only after the signature check passed and the order row was written.
+        trackPurchase(pixelLines, orderTotal);
         setTimeout(() => {
           openWhatsApp(verified.order_id, response.razorpay_payment_id);
           clearCart();
@@ -540,7 +552,10 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                 </div>
 
                 <button
-                  onClick={() => setIsCheckingOut(true)}
+                  onClick={() => {
+                    trackInitiateCheckout(pixelLines, subtotal);
+                    setIsCheckingOut(true);
+                  }}
                   className="w-full min-h-[48px] py-3.5 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm uppercase tracking-[0.05em] transition-colors flex items-center justify-center gap-2 shadow-sm"
                 >
                   <span>PROCEED TO CHECKOUT</span>

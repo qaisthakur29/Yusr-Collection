@@ -1,7 +1,11 @@
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { fetchProductsFromDB } from './data/products';
+import { initMetaPixel } from './lib/metaPixel';
 import './index.css';
+
+// Must run before the first render so App's mount effect can send PageView.
+initMetaPixel();
 
 // A new deploy replaces the hashed route chunks, so a visitor who still has the
 // previous build open can fail to fetch a lazy chunk and be left on a blank

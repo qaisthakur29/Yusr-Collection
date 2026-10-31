@@ -5,6 +5,7 @@ import { Footer } from './components/Footer';
 import { CartDrawer } from './components/CartDrawer';
 import { HomePage } from './pages/HomePage';
 import { Product, fetchProductBySlug, fetchProductsFromDB } from './data/products';
+import { trackPageView } from './lib/metaPixel';
 
 // Only the landing page is part of the initial bundle; every other route is
 // downloaded on demand so the first paint stays fast.
@@ -48,6 +49,12 @@ export default function App() {
   const [catalogReady, setCatalogReady] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productStatus, setProductStatus] = useState<'idle' | 'loading' | 'missing'>('idle');
+
+  // Routing is pathname based, so `currentPath` is the single source of truth
+  // for navigation — one PageView per route, including the landing page.
+  useEffect(() => {
+    trackPageView();
+  }, [currentPath]);
 
   useEffect(() => {
     let cancelled = false;

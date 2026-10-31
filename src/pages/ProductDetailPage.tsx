@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Product, SIZE_CHART } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { optimizeImage } from '../lib/image';
+import { trackViewContent } from '../lib/metaPixel';
 import {
   ShieldCheck,
   Truck,
@@ -32,6 +33,11 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
   useEffect(() => {
     setActiveImage(product.image);
   }, [product.id, product.image]);
+
+  // One ViewContent per product, not per render.
+  useEffect(() => {
+    trackViewContent(product);
+  }, [product.id, product.name, product.price]);
 
   const toggleAccordion = (id: string) => {
     setOpenAccordion(openAccordion === id ? null : id);
