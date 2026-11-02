@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { CartProvider } from './context/CartContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -50,9 +50,14 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productStatus, setProductStatus] = useState<'idle' | 'loading' | 'missing'>('idle');
 
-  // Routing is pathname based, so `currentPath` is the single source of truth
-  // for navigation — one PageView per route, including the landing page.
+  // The base code in index.html already fires PageView for the initial load, so
+  // skip the first run of this effect and only track SPA route changes after it.
+  const hasTrackedInitialPageView = useRef(false);
   useEffect(() => {
+    if (!hasTrackedInitialPageView.current) {
+      hasTrackedInitialPageView.current = true;
+      return;
+    }
     trackPageView();
   }, [currentPath]);
 

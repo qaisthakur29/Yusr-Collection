@@ -15,8 +15,30 @@
     <link rel="preload" as="image" href="/assets/aistudio/HERO_SECTION_BANNER_83e65a6d.jpg" fetchpriority="high" />
     <link rel="prefetch" href="/shop" />
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <!-- Meta Pixel Code -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '1906601310515391');
+      fbq('track', 'PageView');
+    </script>
+    <!-- End Meta Pixel Code -->
   </head>
   <body class="bg-white text-[#1A1A1A] antialiased selection:bg-[#C2A77A] selection:text-[#111111] overflow-x-hidden min-h-[100dvh]">
+    <!-- Meta Pixel no-JS fallback. An <img> inside <noscript> is invalid in <head>,
+         so it lives here at the top of <body> instead. -->
+    <noscript>
+      <img height="1" width="1" style="display:none"
+        src="https://www.facebook.com/tr?id=1906601310515391&ev=PageView&noscript=1"
+        alt="" />
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
