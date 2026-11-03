@@ -1,11 +1,12 @@
-// Technical SEO: per-route <title>, meta description, canonical and Open Graph
-// tags.
+// Technical SEO: per-route <title>, meta description, canonical, Open Graph
+// tags and JSON-LD structured data.
 //
 // The storefront is a client-rendered SPA, so the tags in index.html only ever
 // describe the homepage. This module rewrites the relevant <head> elements on
 // every route change instead of pulling in a head-management library: the app
-// only needs five tags, and React 19 + this toolchain already has a fragile
-// dependency tree (see the `--legacy-peer-deps` note in package.json scripts).
+// only needs a handful of tags, and React 19 + this toolchain already has a
+// fragile dependency tree (see the `--legacy-peer-deps` note in package.json
+// scripts).
 //
 // Every function here is called from a single effect in App.tsx so the final
 // state of <head> is decided in exactly one place.
@@ -129,6 +130,35 @@ function upsertCanonical(href: string): void {
   link.setAttribute('href', href);
 }
 
+// Exactly one JSON-LD <script> is kept in <head>, tagged with this id. Sharing a
+// single element between routes is what stops a Product schema being left behind
+// after the visitor navigates back to a static page.
+const JSON_LD_SCRIPT_ID = 'seo-json-ld';
+
+/**
+ * Replaces the page's structured data, or removes it when `data` is null.
+ * JSON-LD is inert markup — Google reads it, browsers never execute it.
+ */
+function upsertJsonLd(data: Record<string, unknown> | null): void {
+  const existing = document.getElementById(JSON_LD_SCRIPT_ID);
+
+  if (!data) {
+    existing?.remove();
+    return;
+  }
+
+  const script = (existing ?? document.createElement('script')) as HTMLScriptElement;
+  if (!existing) {
+    script.id = JSON_LD_SCRIPT_ID;
+    script.type = 'application/ld+json';
+    document.head.appendChild(script);
+  }
+
+  // textContent rather than innerHTML: the serialised JSON is data, and must
+  // never be reparsed as markup.
+  script.textContent = JSON.stringify(data);
+}
+
 /** Turns a site-relative path or image reference into an absolute URL. */
 function absoluteUrl(value: string): string {
   if (/^https?:\/\//i.test(value)) return value;
@@ -146,15 +176,95 @@ function toMetaDescription(text: string, fallback = DEFAULT_DESCRIPTION, max = 1
   return `${(lastSpace > 80 ? clipped.slice(0, lastSpace) : clipped).trimEnd()}…`;
 }
 
+// ---------------------------------------------------------------------------
+// Structured data (JSON-LD)
+// ---------------------------------------------------------------------------
+
+// Logo file the Navbar and Footer already render, so the schema and the visible
+// brand asset can never drift apart.
+const LOGO_URL = `${SITE_URL}/assets/aistudio/YUSR_COLLECTION_REMOVED_BG_LOGO_82f5c6c0.png`;
+
+/** Site-wide entity: who publishes this store. */
+function organizationSchema(): Record<string, unknown> {
+  return {
+    '@type': 'Organization',
+    // @id lets the WebSite/Product nodes reference this one node instead of
+    // repeating the company details in every schema.
+    '@id': `${SITE_URL}/#organization`,
+    name: SITE_NAME,
+    url: `${SITE_URL}/`,
+    logo: LOGO_URL,
+    description: DEFAULT_DESCRIPTION,
+  };
+}
+
+/**
+ * The site as an entity. Deliberately has no `potentialAction`/SearchAction —
+ * Google requires a real search endpoint for that, and the storefront has none.
+ */
+function websiteSchema(): Record<string, unknown> {
+  return {
+    '@type': 'WebSite',
+    '@id': `${SITE_URL}/#website`,
+    name: SITE_NAME,
+    url: `${SITE_URL}/`,
+    description: DEFAULT_DESCRIPTION,
+    inLanguage: 'en-IN',
+    publisher: { '@id': `${SITE_URL}/#organization` },
+  };
+}
+
+/**
+ * Product schema for a product page.
+ *
+ * `availability` is hard-coded to InStock because the `products` table has no
+ * stock column — every piece is made to order. If stock is ever tracked, this is
+ * the one place that has to read it.
+ */
+function productSchema(
+  product: Product,
+  canonical: string,
+  image: string,
+): Record<string, unknown> {
+  return {
+    '@type': 'Product',
+    '@id': `${canonical}#product`,
+    name: product.name,
+    description: toMetaDescription(product.description, `Buy ${product.name} from ${SITE_NAME}.`),
+    image: [image],
+    sku: product.id,
+    category: product.category,
+    url: canonical,
+    brand: { '@type': 'Brand', name: SITE_NAME },
+    offers: {
+      '@type': 'Offer',
+      url: canonical,
+      price: product.price,
+      priceCurrency: 'INR',
+      availability: 'https://schema.org/InStock',
+      itemCondition: 'https://schema.org/NewCondition',
+    },
+  };
+}
+
 interface SeoInput {
   title: string;
   description: string;
   canonical: string;
   image?: string;
   type?: 'website' | 'product';
+  /** Structured data for this route, or null to clear whatever was set before. */
+  jsonLd?: Record<string, unknown> | null;
 }
 
-function applySeo({ title, description, canonical, image, type = 'website' }: SeoInput): void {
+function applySeo({
+  title,
+  description,
+  canonical,
+  image,
+  type = 'website',
+  jsonLd = null,
+}: SeoInput): void {
   const ogImage = image ? absoluteUrl(image) : DEFAULT_OG_IMAGE;
 
   document.title = title;
@@ -172,6 +282,8 @@ function applySeo({ title, description, canonical, image, type = 'website' }: Se
   upsertMeta('property', 'og:description', description);
   upsertMeta('property', 'og:url', canonical);
   upsertMeta('property', 'og:image', ogImage);
+
+  upsertJsonLd(jsonLd);
 }
 
 /** Canonical URL of a static route. '/' keeps its trailing slash; others do not. */
@@ -189,6 +301,15 @@ export function applyStaticSeo(path: string): void {
     title: seo.title,
     description: seo.description,
     canonical: STATIC_ROUTE_SEO[path] ? staticCanonical(path) : staticCanonical('/'),
+    // Organization + WebSite belong to the site as a whole, so only the homepage
+    // carries them; every other route explicitly clears whatever ran before.
+    jsonLd:
+      path === '/'
+        ? {
+            '@context': 'https://schema.org',
+            '@graph': [organizationSchema(), websiteSchema()],
+          }
+        : null,
   });
 }
 
@@ -202,16 +323,25 @@ export function productCanonical(slug: string): string {
 
 /** Applies product-specific metadata pulled from Supabase. */
 export function applyProductSeo(product: Product): void {
+  const canonical = productCanonical(product.slug);
+  // 1200px keeps the social preview sharp while staying inside the size
+  // limits social scrapers enforce. optimizeImage is a no-op on local assets.
+  const image = optimizeImage(product.image, 1200) || DEFAULT_OG_IMAGE;
+
   applySeo({
     title: `${product.name} | ${SITE_NAME}`,
     description: toMetaDescription(
       product.description,
       `Buy ${product.name} from YUSR COLLECTION — heavyweight 240 GSM oversized tee with a made-to-order custom print.`,
     ),
-    canonical: productCanonical(product.slug),
-    // 1200px keeps the social preview sharp while staying inside the size
-    // limits social scrapers enforce. optimizeImage is a no-op on local assets.
-    image: optimizeImage(product.image, 1200) || DEFAULT_OG_IMAGE,
+    canonical,
+    image,
     type: 'product',
+    jsonLd: {
+      '@context': 'https://schema.org',
+      // Structured data wants an absolute image URL; absoluteUrl is a no-op on
+      // the Cloudinary URLs optimizeImage returns.
+      ...productSchema(product, canonical, absoluteUrl(image)),
+    },
   });
 }

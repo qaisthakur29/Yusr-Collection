@@ -8,6 +8,13 @@ import { Product, fetchProductBySlug, fetchProductsFromDB } from './data/product
 import { trackPageView } from './lib/metaPixel';
 import { applyProductSeo, applyStaticSeo } from './lib/seo';
 
+declare global {
+  interface Window {
+    /** GA4 command queue. The inline snippet in index.html defines it synchronously. */
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
 // Only the landing page is part of the initial bundle; every other route is
 // downloaded on demand so the first paint stays fast.
 const ShopPage = lazy(() => import('./pages/ShopPage').then((m) => ({ default: m.ShopPage })));
@@ -54,7 +61,8 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productStatus, setProductStatus] = useState<'idle' | 'loading' | 'missing'>('idle');
 
-  // The base code in index.html already fires PageView for the initial load, so
+  // The Meta Pixel base code in index.html already fires PageView for the initial
+  // load, and GA4's gtag('config') there sends the matching initial page_view, so
   // skip the first run of this effect and only track SPA route changes after it.
   const hasTrackedInitialPageView = useRef(false);
   useEffect(() => {
@@ -63,6 +71,10 @@ export default function App() {
       return;
     }
     trackPageView();
+    // No ready-check needed: index.html declares gtag() inline, so it exists here
+    // even when gtag.js is still downloading or was blocked — calls just queue on
+    // dataLayer. The optional call covers the snippet being stripped entirely.
+    window.gtag?.('event', 'page_view', { page_path: currentPath });
   }, [currentPath]);
 
   useEffect(() => {

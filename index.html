@@ -39,6 +39,17 @@
       fbq('track', 'PageView');
     </script>
     <!-- End Meta Pixel Code -->
+
+    <!-- Google Analytics 4 (gtag.js). The config call sends the initial
+         page_view for the landing URL. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-NCPD0CW5G6"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-NCPD0CW5G6');
+    </script>
+    <!-- End Google Analytics 4 -->
   </head>
   <body class="bg-white text-[#1A1A1A] antialiased selection:bg-[#C2A77A] selection:text-[#111111] overflow-x-hidden min-h-[100dvh]">
     <!-- Meta Pixel no-JS fallback. An <img> inside <noscript> is invalid in <head>,
@@ -48,7 +59,14 @@
         src="https://www.facebook.com/tr?id=1906601310515391&ev=PageView&noscript=1"
         alt="" />
     </noscript>
-    <div id="root"></div>
+    <div id="root"><!-- Static H1 for crawlers. The SPA renders its hero as an image
+      with no heading, so without this the raw HTML would ship no H1 at all. React
+      only clears a root container's children during a View Transition (the
+      Snapshot flag), so this node survives the client render. Inline styles rather
+      than a utility class: the raw HTML has to be self-contained for crawlers that
+      never load the CSS bundle. -->
+      <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">Premium Islamic Streetwear for the Believers</h1>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
