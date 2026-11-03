@@ -20,6 +20,7 @@ const STATIC_ROUTES = [
   '/terms',
   '/track-order',
   '/contact',
+  '/html-sitemap',
 ];
 
 // Product slugs live in Supabase, so they cannot be discovered from the bundle.
@@ -59,6 +60,12 @@ async function fetchProductRoutes(supabaseUrl?: string, anonKey?: string): Promi
   }
 }
 
+// Every package that `react-markdown` pulls in. Kept as one pattern so the whole
+// dependency tree is classified as a unit rather than drifting between chunks as
+// transitive versions change.
+const MARKDOWN_MODULES =
+  /[\\/]node_modules[\\/](?:react-markdown|@ungap|remark-parse|remark-rehype|unified|bail|trough|zwitch|vfile(?:-message)?|devlop|dequal|ccount|longest-streak|trim-lines|parse-entities|stringify-entities|character-entities(?:-html4|-legacy)?|character-reference-invalid|decode-named-character-reference|property-information|space-separated-tokens|comma-separated-tokens|style-to-object|inline-style-parser|html-url-attributes|estree-util-is-identifier-name|is-alphabetical|is-alphanumerical|is-decimal|is-hexadecimal|is-plain-obj|micromark[a-z-]*|mdast-util[a-z-]*|hast-util[a-z-]*|unist-util[a-z-]*)[\\/]/;
+
 export default defineConfig(async ({mode}) => {
   const env = loadEnv(mode, process.cwd(), '');
   const productRoutes = await fetchProductRoutes(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
@@ -93,14 +100,55 @@ export default defineConfig(async ({mode}) => {
         output: {
           // Split rarely-changing vendor libraries into their own chunks so the
           // browser can cache them long-term across app-code deploys.
-          manualChunks(id: string) {
-            if (!id.includes('node_modules')) return;
-            if (id.includes('@supabase')) return 'vendor-supabase';
-            if (id.includes('lucide-react')) return 'vendor-icons';
-            if (id.includes('react-dom') || id.includes('/react/') || id.includes('scheduler')) {
-              return 'vendor-react';
-            }
-            return 'vendor';
+          //
+          // This uses rolldown's own `codeSplitting.groups` rather than the
+          // Rollup-compatible `output.manualChunks` function. manualChunks is still
+          // accepted, but rolldown migrates it into a single group whose `name()`
+          // return value is not honoured per module: react and react/jsx-runtime
+          // were being swept into whichever chunk imported them first
+          // (vendor-icons and vendor-markdown). Because the entry chunk imports
+          // react/jsx-runtime statically, that made the whole markdown chunk a
+          // modulepreload on the landing page. Explicit groups with priorities are
+          // what actually decides membership here.
+          //
+          // Every `test` uses [\\/] instead of / so it still matches when rolldown
+          // reports Windows-style paths.
+          codeSplitting: {
+            groups: [
+              {
+                // Highest priority: react, react-dom and scheduler must always land
+                // together. If React core is captured by another group, that group
+                // becomes a static dependency of the entry chunk.
+                name: 'vendor-react',
+                test: /[\\/]node_modules[\\/](?:react|react-dom|scheduler)[\\/]/,
+                priority: 40,
+              },
+              {
+                // react-markdown plus its transitive remark / micromark / mdast /
+                // hast / unist packages. Only ProductDetailPage imports these, so
+                // they stay in a lazy chunk nobody downloads unless they open a
+                // product page.
+                name: 'vendor-markdown',
+                test: MARKDOWN_MODULES,
+                priority: 30,
+              },
+              {
+                name: 'vendor-supabase',
+                test: /[\\/]node_modules[\\/]@supabase[\\/]/,
+                priority: 20,
+              },
+              {
+                name: 'vendor-icons',
+                test: /[\\/]node_modules[\\/]lucide-react[\\/]/,
+                priority: 10,
+              },
+              {
+                // Everything else in node_modules.
+                name: 'vendor',
+                test: /[\\/]node_modules[\\/]/,
+                priority: 0,
+              },
+            ],
           },
         },
       },

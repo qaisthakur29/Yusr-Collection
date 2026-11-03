@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import { Product, SIZE_CHART } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { optimizeImage } from '../lib/image';
@@ -20,6 +21,42 @@ interface ProductDetailPageProps {
   onNavigate: (path: string) => void;
   onBack: () => void;
 }
+
+// Markdown output styling for the product description: Montserrat (font-heading)
+// for headings, DM Sans (font-body) for prose — same typography scale as the
+// accordion labels it sits inside.
+//
+// The `node` prop is react-markdown's internal AST node; it is stripped out so it
+// never lands on a real DOM element. Markdown is rendered without rehype-raw, so
+// raw HTML in the description is escaped rather than injected.
+const MD_HEADING = 'font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A] pt-3';
+const MD_LINK = 'underline decoration-[#C2A77A] underline-offset-2 hover:text-[#C2A77A]';
+
+const MARKDOWN_COMPONENTS: Components = {
+  // h1/h2 collapse into h3 so a description can never add a second page-level
+  // heading above the product name.
+  h1: ({ node: _node, ...props }) => <h3 className={MD_HEADING} {...props} />,
+  h2: ({ node: _node, ...props }) => <h3 className={MD_HEADING} {...props} />,
+  h3: ({ node: _node, ...props }) => <h3 className={MD_HEADING} {...props} />,
+  h4: ({ node: _node, ...props }) => <h4 className={MD_HEADING} {...props} />,
+  p: ({ node: _node, ...props }) => (
+    <p className="font-body text-xs text-[#666666] leading-relaxed" {...props} />
+  ),
+  ul: ({ node: _node, ...props }) => (
+    <ul className="list-disc list-inside space-y-1 text-[#1A1A1A] font-body text-xs" {...props} />
+  ),
+  ol: ({ node: _node, ...props }) => (
+    <ol className="list-decimal list-inside space-y-1 text-[#1A1A1A] font-body text-xs" {...props} />
+  ),
+  li: ({ node: _node, ...props }) => <li className="leading-relaxed" {...props} />,
+  strong: ({ node: _node, ...props }) => (
+    <strong className="font-semibold text-[#1A1A1A]" {...props} />
+  ),
+  em: ({ node: _node, ...props }) => <em className="italic text-[#1A1A1A]" {...props} />,
+  a: ({ node: _node, ...props }) => (
+    <a target="_blank" rel="noopener noreferrer" className={MD_LINK} {...props} />
+  ),
+};
 
 export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetailPageProps) {
   const { addToCart } = useCart();
@@ -302,7 +339,9 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
                 </button>
                 {openAccordion === 'desc' && (
                   <div className="pb-4 text-xs text-[#666666] font-body space-y-2 leading-relaxed">
-                    <p>{product.description}</p>
+                    <ReactMarkdown components={MARKDOWN_COMPONENTS}>
+                      {product.description}
+                    </ReactMarkdown>
                     <ul className="list-disc list-inside space-y-1 pt-1 text-[#1A1A1A]">
                       {product.details.map((detail, idx) => (
                         <li key={idx}>{detail}</li>

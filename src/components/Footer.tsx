@@ -170,6 +170,14 @@ export function Footer({ onNavigate }: FooterProps) {
                   Terms & Conditions
                 </button>
               </li>
+              <li>
+                <button
+                  onClick={() => handleLinkClick('/html-sitemap')}
+                  className="text-[#666666] hover:text-[#1A1A1A] transition-colors py-1 text-left"
+                >
+                  Site Map
+                </button>
+              </li>
             </ul>
           </div>
 

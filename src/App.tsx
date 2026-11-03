@@ -6,6 +6,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { HomePage } from './pages/HomePage';
 import { Product, fetchProductBySlug, fetchProductsFromDB } from './data/products';
 import { trackPageView } from './lib/metaPixel';
+import { applyProductSeo, applyStaticSeo } from './lib/seo';
 
 // Only the landing page is part of the initial bundle; every other route is
 // downloaded on demand so the first paint stays fast.
@@ -27,6 +28,9 @@ const TrackOrderPage = lazy(() =>
 );
 const ContactPage = lazy(() =>
   import('./pages/ContactPage').then((m) => ({ default: m.ContactPage })),
+);
+const HtmlSitemapPage = lazy(() =>
+  import('./pages/HtmlSitemapPage').then((m) => ({ default: m.HtmlSitemapPage })),
 );
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })));
 
@@ -111,6 +115,22 @@ export default function App() {
     };
   }, [currentPath, catalog, catalogReady]);
 
+  // Rewrite <title>, meta description, canonical and Open Graph tags for the
+  // current route. Kept in one effect so <head> always reflects the final state
+  // rather than racing with a second writer elsewhere.
+  useEffect(() => {
+    if (currentPath.startsWith('/product/')) {
+      // Only apply once the product for this exact URL has resolved, otherwise a
+      // product page would briefly canonicalise to the homepage.
+      const slug = productSlugFromPath(currentPath);
+      if (selectedProduct && slug && selectedProduct.slug === slug) {
+        applyProductSeo(selectedProduct);
+      }
+      return;
+    }
+    applyStaticSeo(currentPath);
+  }, [currentPath, selectedProduct]);
+
   // Handle browser popstate (back / forward buttons)
   useEffect(() => {
     const handlePopState = () => {
@@ -187,6 +207,15 @@ export default function App() {
         return <TrackOrderPage />;
       case '/contact':
         return <ContactPage />;
+      case '/html-sitemap':
+        return (
+          <HtmlSitemapPage
+            products={catalog}
+            productsReady={catalogReady}
+            onNavigate={navigateTo}
+            onSelectProduct={handleSelectProduct}
+          />
+        );
       case '/admin':
         return <AdminPage />;
       case '/':
