@@ -1,33 +1,93 @@
 import React, { useState } from 'react';
-import { Search, PackageCheck, Printer, Truck, CheckCircle2, MessageCircle, Clock } from 'lucide-react';
+import {
+  Search,
+  Package,
+  PackageCheck,
+  Truck,
+  CheckCircle2,
+  MessageCircle,
+  Clock,
+  SearchX,
+  ExternalLink,
+} from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
+
+type TrackedOrder = {
+  id: string;
+  order_number: string | null;
+  status: string;
+  tracking_url: string | null;
+  created_at: string;
+};
+
+// Confirmed (0) -> Processing (1) -> Dispatched (2) -> Delivered (3)
+function statusStep(status: string): number {
+  const s = status.toLowerCase();
+  if (s.includes('deliver')) return 3;
+  if (s.includes('dispatch') || s.includes('ship') || s.includes('transit')) return 2;
+  return 1; // Pending / Paid / Processing — being prepared
+}
+
+const STEPS = [
+  { label: 'Confirmed', Icon: CheckCircle2 },
+  { label: 'Processing', Icon: Package },
+  { label: 'Dispatched', Icon: Truck },
+  { label: 'Delivered', Icon: PackageCheck },
+];
 
 export function TrackOrderPage() {
   const [orderQuery, setOrderQuery] = useState('');
-  const [searchedOrder, setSearchedOrder] = useState<{
-    id: string;
-    status: string;
-    step: number;
-    estimatedDelivery: string;
-  } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+  const [order, setOrder] = useState<TrackedOrder | null>(null);
 
-  const handleTrack = (e: React.FormEvent) => {
+  const handleTrack = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orderQuery.trim()) return;
+    const raw = orderQuery.trim();
+    if (!raw) return;
 
-    // Simulate real order lookup state
-    const cleanId = orderQuery.trim().toUpperCase();
-    setSearchedOrder({
-      id: cleanId.startsWith('YUSR') ? cleanId : `YUSR-${cleanId}`,
-      status: 'Custom Printing in Progress (3-5 Business Days)',
-      step: 2,
-      estimatedDelivery: '7-10 Business Days from order placement',
+    setLoading(true);
+    setNotFound(false);
+    setOrder(null);
+
+    // Order rows are not readable by anon clients (INSERT-only RLS), so the
+    // lookup runs through the public track-order Edge Function.
+    const { data, error } = await supabase.functions.invoke('track-order', {
+      body: { order_number: raw },
     });
+
+    setLoading(false);
+
+    if (error || data?.error || !data?.order) {
+      console.warn('[track-order] lookup failed', { query: raw, error, data });
+      setNotFound(true);
+      return;
+    }
+
+    // If the order came back but has no usable courier link, surface exactly what
+    // the Edge Function returned so a missing/lost tracking_url is diagnosable.
+    const found = data.order as TrackedOrder;
+    if (!found.tracking_url || found.tracking_url.trim().length <= 5) {
+      console.warn('[track-order] no usable tracking_url in response', {
+        query: raw,
+        response: data,
+      });
+    }
+
+    setOrder(found);
   };
+
+  const currentStep = order ? statusStep(order.status) : 0;
+
+  // A usable courier link must be a real URL; an empty or whitespace-only string
+  // would otherwise render a dead "Track Package" button.
+  const trackingUrl = order?.tracking_url?.trim() ?? '';
+  const hasTrackingLink = currentStep === 2 && trackingUrl.length > 5;
 
   return (
     <div className="bg-white min-h-[100dvh] py-12 sm:py-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
-        
+
         {/* Header */}
         <div className="border-b border-[#E5E5E5] pb-6 mb-8 text-center sm:text-left">
           <div className="text-xs font-heading font-bold uppercase tracking-[0.15em] text-[#C2A77A] mb-1">
@@ -47,83 +107,133 @@ export function TrackOrderPage() {
             Check Live Status
           </h2>
           <p className="text-xs text-[#666666] mb-4 font-body">
-            Enter your Order ID received via WhatsApp / Email (e.g., YUSR-10482):
+            Enter the Order ID you received via WhatsApp / Email:
           </p>
           <form onSubmit={handleTrack} className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="w-4 h-4 text-[#666666] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Enter Order ID (e.g. YUSR-10482)"
+                placeholder="Enter Order ID (e.g., YUSR-123456)"
                 value={orderQuery}
                 onChange={(e) => setOrderQuery(e.target.value)}
-                className="w-full min-h-[44px] pl-10 pr-3.5 border border-[#E5E5E5] bg-white text-xs sm:text-sm uppercase focus:outline-none focus:border-[#C2A77A]"
+                className="w-full min-h-[44px] pl-10 pr-3.5 border border-[#E5E5E5] bg-white text-xs sm:text-sm focus:outline-none focus:border-[#C2A77A]"
               />
             </div>
             <button
               type="submit"
-              className="min-h-[44px] px-6 py-2.5 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-xs uppercase tracking-wider transition-colors"
+              disabled={loading}
+              className="min-h-[44px] px-6 py-2.5 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-xs uppercase tracking-wider transition-colors disabled:opacity-60"
             >
-              TRACK ORDER
+              {loading ? 'CHECKING…' : 'TRACK ORDER'}
             </button>
           </form>
 
-          {/* Search Result Visual Timeline */}
-          {searchedOrder && (
+          {/* Result — Order Not Found */}
+          {notFound && (
+            <div className="mt-6 pt-6 border-t border-[#E5E5E5]">
+              <div className="bg-white border border-[#E5E5E5] p-6 sm:p-8 text-center space-y-3">
+                <div className="w-14 h-14 rounded-full bg-[#F7F4EE] border border-[#C2A77A] flex items-center justify-center mx-auto">
+                  <SearchX className="w-6 h-6 text-[#C2A77A]" />
+                </div>
+                <h3 className="font-heading font-extrabold text-lg uppercase tracking-tight text-[#1A1A1A]">
+                  Order Not Found
+                </h3>
+                <p className="text-xs sm:text-sm text-[#666666] font-body max-w-md mx-auto">
+                  We couldn't find an order with this ID. Please check your Order ID and try again.
+                </p>
+                <p className="text-[11px] text-[#666666] font-body max-w-md mx-auto border-t border-[#E5E5E5] pt-3">
+                  If you just placed the order, please allow 24 hours for it to sync. Still having trouble?{' '}
+                  <a
+                    href="https://wa.me/919326184407?text=Salam!%20I%20need%20help%20tracking%20my%20order."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold text-[#1A1A1A] underline underline-offset-2"
+                  >
+                    Contact us on WhatsApp
+                  </a>
+                  .
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Result — Visual Timeline */}
+          {order && (
             <div className="mt-6 pt-6 border-t border-[#E5E5E5] space-y-4">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="min-w-0">
                   <span className="text-[11px] font-heading uppercase text-[#666666]">Status for</span>
-                  <div className="font-heading font-bold text-base text-[#1A1A1A]">{searchedOrder.id}</div>
+                  <div className="font-heading font-bold text-xs sm:text-sm text-[#1A1A1A] break-all">
+                    {order.order_number ?? order.id}
+                  </div>
                 </div>
-                <span className="px-2.5 py-1 bg-[#F7F4EE] border border-[#C2A77A] text-[11px] font-heading font-bold text-[#1A1A1A] uppercase">
-                  ACTIVE
+                <span className="ml-3 shrink-0 px-2.5 py-1 bg-[#F7F4EE] border border-[#C2A77A] text-[11px] font-heading font-bold text-[#1A1A1A] uppercase">
+                  {currentStep === 3 ? 'DELIVERED' : 'ACTIVE'}
                 </span>
               </div>
 
               {/* Progress Bar */}
               <div className="grid grid-cols-4 gap-2 pt-2">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-8 h-8 rounded-full bg-[#1A1A1A] text-white flex items-center justify-center text-xs mb-1">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <span className="text-[10px] font-heading font-bold uppercase text-[#1A1A1A]">Confirmed</span>
-                </div>
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-8 h-8 rounded-full bg-[#C2A77A] text-[#111111] flex items-center justify-center text-xs mb-1">
-                    <Printer className="w-4 h-4" />
-                  </div>
-                  <span className="text-[10px] font-heading font-bold uppercase text-[#1A1A1A]">Printing</span>
-                </div>
-                <div className="flex flex-col items-center text-center opacity-40">
-                  <div className="w-8 h-8 rounded-full bg-[#E5E5E5] text-[#666666] flex items-center justify-center text-xs mb-1">
-                    <Truck className="w-4 h-4" />
-                  </div>
-                  <span className="text-[10px] font-heading font-bold uppercase text-[#666666]">Dispatched</span>
-                </div>
-                <div className="flex flex-col items-center text-center opacity-40">
-                  <div className="w-8 h-8 rounded-full bg-[#E5E5E5] text-[#666666] flex items-center justify-center text-xs mb-1">
-                    <PackageCheck className="w-4 h-4" />
-                  </div>
-                  <span className="text-[10px] font-heading font-bold uppercase text-[#666666]">Delivered</span>
-                </div>
+                {STEPS.map(({ label, Icon }, i) => {
+                  const state = i < currentStep ? 'done' : i === currentStep ? 'current' : 'upcoming';
+                  const circle =
+                    state === 'done'
+                      ? 'bg-[#1A1A1A] text-white'
+                      : state === 'current'
+                        ? 'bg-[#C2A77A] text-[#111111]'
+                        : 'bg-[#E5E5E5] text-[#666666]';
+                  const text = state === 'upcoming' ? 'text-[#666666]' : 'text-[#1A1A1A]';
+                  return (
+                    <div
+                      key={label}
+                      className={`flex flex-col items-center text-center ${state === 'upcoming' ? 'opacity-40' : ''}`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${circle}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <span className={`text-[10px] font-heading font-bold uppercase ${text}`}>{label}</span>
+                    </div>
+                  );
+                })}
               </div>
 
               <p className="text-xs text-[#666666] font-body text-center pt-2">
-                Current Stage: <span className="text-[#1A1A1A] font-semibold">{searchedOrder.status}</span>. You will receive an SMS and WhatsApp tracking link once handed over to the courier partner.
+                {currentStep === 3 && 'Your order has been delivered. We hope you love it!'}
+                {currentStep === 2 &&
+                  (hasTrackingLink
+                    ? 'Your order has been dispatched and is on its way.'
+                    : 'Your order has been dispatched. Your tracking link will appear here shortly.')}
+                {currentStep <= 1 && 'Your order is being prepared and packed.'}
               </p>
+
+              {/* Prominent Track Package button (Dispatched + link available) */}
+              {hasTrackingLink && (
+                <div className="pt-1">
+                  <a
+                    href={trackingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full min-h-[52px] px-8 py-4 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm uppercase tracking-wider inline-flex items-center justify-center gap-2.5 transition-colors shadow-sm"
+                  >
+                    <Truck className="w-5 h-5" />
+                    <span>Track Package</span>
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Exact Educational Text from provided file */}
+        {/* Educational Text */}
         <div className="space-y-6 font-body text-[#1A1A1A] leading-relaxed">
           <p className="text-sm sm:text-base text-[#666666]">
-            Since all our products are made-to-order, here is how you can track your package:
+            Here is how you can track your package:
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
+
             <div className="p-4 border border-[#E5E5E5] bg-white space-y-2">
               <div className="flex items-center gap-2 font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]">
                 <CheckCircle2 className="w-4 h-4 text-[#C2A77A]" />
@@ -137,10 +247,10 @@ export function TrackOrderPage() {
             <div className="p-4 border border-[#E5E5E5] bg-white space-y-2">
               <div className="flex items-center gap-2 font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]">
                 <Clock className="w-4 h-4 text-[#C2A77A]" />
-                2. Printing & Packing
+                2. Processing & Packing
               </div>
               <p className="text-xs text-[#666666]">
-                Your order is sent to our printing partner. This takes 3-5 business days to guarantee zero defects.
+                Your order is carefully prepared and packed. This takes 3-5 business days to guarantee zero defects.
               </p>
             </div>
 

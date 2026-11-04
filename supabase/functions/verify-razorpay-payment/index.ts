@@ -135,23 +135,35 @@ Deno.serve(async (req) => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const { data: order, error: insertError } = await admin
-      .from('orders')
-      .insert({
-        customer_name: clean(body?.customer_name, 120),
-        phone: clean(body?.phone, 20),
-        email: clean(body?.email, 200),
-        address: clean(body?.address, 500),
-        total_amount: Math.round(amountPaise / 100),
-        status: 'Paid',
-        // This function only ever handles prepaid payments, so the method is set
-        // here rather than trusted from the client.
-        payment_method: 'Prepaid',
-        razorpay_order_id: orderId,
-        razorpay_payment_id: paymentId,
-      })
-      .select('id')
-      .single();
+    const buildOrderNumber = () => `YUSR-${Math.floor(100000 + Math.random() * 900000)}`;
+    const insertOrder = (orderNumber: string) =>
+      admin
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          customer_name: clean(body?.customer_name, 120),
+          phone: clean(body?.phone, 20),
+          email: clean(body?.email, 200),
+          address: clean(body?.address, 500),
+          total_amount: Math.round(amountPaise / 100),
+          status: 'Paid',
+          // This function only ever handles prepaid payments, so the method is set
+          // here rather than trusted from the client.
+          payment_method: 'Prepaid',
+          razorpay_order_id: orderId,
+          razorpay_payment_id: paymentId,
+        })
+        .select('id, order_number')
+        .single();
+
+    let { data: order, error: insertError } = await insertOrder(clean(body?.order_number, 20) ?? buildOrderNumber());
+
+    // A random 6-digit display number can theoretically collide with an existing
+    // one. When that is the conflict, retry with a fresh number so a real payment
+    // is never misreported as "already recorded".
+    if (insertError?.message.includes('order_number')) {
+      ({ data: order, error: insertError } = await insertOrder(buildOrderNumber()));
+    }
 
     if (insertError) {
       if (insertError.code === '23505') {
@@ -161,7 +173,7 @@ Deno.serve(async (req) => {
       return json({ error: 'Could not record order' }, 500, headers);
     }
 
-    return json({ success: true, order_id: order.id }, 200, headers);
+    return json({ success: true, order_id: order?.id, order_number: order?.order_number ?? null }, 200, headers);
   } catch (err) {
     console.error('verify-razorpay-payment: unexpected error', err);
     return json({ error: 'Unexpected error' }, 500, headers);

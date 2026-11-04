@@ -1,4 +1,4 @@
-// Admin order management (list / dispatch / delete).
+// Admin order management (list / dispatch / deliver / delete).
 //
 // Authorization is Supabase Auth based: the caller must present a valid access
 // token whose user is an admin. There is no shared password any more, so nothing
@@ -125,12 +125,43 @@ Deno.serve(async (req) => {
     if (!id) return json({ error: 'Invalid request' }, 400, headers);
 
     if (action === 'dispatch') {
-      const { error } = await auth.admin
+      // The tracking link is optional, but when present it must be a real
+      // http(s) URL so we never render a javascript: link on the track page.
+      const rawTrackingUrl = typeof body?.tracking_url === 'string' ? body.tracking_url.trim() : '';
+      if (rawTrackingUrl && !/^https?:\/\/\S+$/i.test(rawTrackingUrl)) {
+        return json({ error: 'Tracking URL must start with http:// or https://' }, 400, headers);
+      }
+
+      // An empty link is omitted from the patch entirely, so re-saving an order
+      // never wipes a tracking_url that is already stored.
+      const patch: Record<string, unknown> = { status: 'Dispatched' };
+      if (rawTrackingUrl) patch.tracking_url = rawTrackingUrl.slice(0, 500);
+
+      const { data, error } = await auth.admin
         .from('orders')
-        .update({ status: 'Dispatched' })
-        .eq('id', id);
+        .update(patch)
+        .eq('id', id)
+        .select('id');
       if (error) {
         console.error('get-admin-orders: dispatch failed', error.message);
+        return json({ error: 'Could not update order' }, 500, headers);
+      }
+      // `.update()` reports success even when it matched zero rows, which made a
+      // stale id look like a successful save. Fail loudly instead.
+      if (!data || data.length === 0) {
+        console.error('get-admin-orders: dispatch matched no order', id);
+        return json({ error: 'Order not found' }, 404, headers);
+      }
+      return json({ success: true, tracking_url: (patch.tracking_url as string) ?? null }, 200, headers);
+    }
+
+    if (action === 'deliver') {
+      const { error } = await auth.admin
+        .from('orders')
+        .update({ status: 'Delivered' })
+        .eq('id', id);
+      if (error) {
+        console.error('get-admin-orders: deliver failed', error.message);
         return json({ error: 'Could not update order' }, 500, headers);
       }
       return json({ success: true }, 200, headers);

@@ -68,10 +68,10 @@ export function CartDrawer() {
       .map((i) => `• ${i.product.name} (Size: ${i.size}, Qty: ${i.quantity}) - ₹${i.product.price * i.quantity}`)
       .join('\n');
 
-    const openWhatsApp = (orderId: string, paymentId?: string) => {
+    const openWhatsApp = (orderNumber: string, paymentId?: string) => {
       const msg = `Salam! I would like to place an order on Yusr Collection:
 
-📦 *Order ID:* ${orderId}
+📦 *Order ID:* ${orderNumber}
 👤 *Name:* ${formData.name}
 📞 *Phone:* ${formData.phone}
 📍 *Address:* ${fullAddress}
@@ -95,9 +95,11 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
       // The anon role may INSERT but not read rows back (there is no SELECT policy),
       // so the id is generated client-side and `.select()` is deliberately omitted.
       const orderId = crypto.randomUUID();
+      const orderNumber = `YUSR-${Math.floor(100000 + Math.random() * 900000)}`;
 
       const { error: insertError } = await supabase.from('orders').insert({
         id: orderId,
+        order_number: orderNumber,
         customer_name: formData.name.trim(),
         phone: formData.phone.trim(),
         email: formData.email.trim(),
@@ -119,7 +121,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
       trackPurchase(pixelLines, orderTotal);
       trackGa4Purchase(pixelLines, orderTotal, orderId);
       setTimeout(() => {
-        openWhatsApp(orderId);
+        openWhatsApp(orderNumber);
         clearCart();
       }, 1500);
       return;
@@ -128,6 +130,8 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
     // ---------- Prepaid: create the Razorpay order, save only after payment succeeds ----------
     // DB prices are numeric and can be fractional, but the Edge Function only
     // accepts an integer rupee amount.
+    const orderNumber = `YUSR-${Math.floor(100000 + Math.random() * 900000)}`;
+
     const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
       body: { amount: Math.round(orderTotal) },
     });
@@ -165,6 +169,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
+              order_number: orderNumber,
               customer_name: formData.name.trim(),
               phone: formData.phone.trim(),
               email: formData.email.trim(),
@@ -187,7 +192,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
         trackPurchase(pixelLines, orderTotal);
         trackGa4Purchase(pixelLines, orderTotal, verified.order_id);
         setTimeout(() => {
-          openWhatsApp(verified.order_id, response.razorpay_payment_id);
+          openWhatsApp(verified.order_number ?? orderNumber, response.razorpay_payment_id);
           clearCart();
         }, 1500);
       },

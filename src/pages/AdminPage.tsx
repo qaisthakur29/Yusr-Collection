@@ -23,6 +23,7 @@ type AdminProduct = {
 
 type AdminOrder = {
   id: string;
+  order_number: string | null;
   customer_name: string;
   phone: string;
   email: string | null;
@@ -31,6 +32,7 @@ type AdminOrder = {
   status: string;
   payment_method: string | null;
   razorpay_payment_id: string | null;
+  tracking_url: string | null;
   created_at: string;
 };
 
@@ -124,9 +126,11 @@ export function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dispatchingId, setDispatchingId] = useState<string | null>(null);
+  const [deliveringId, setDeliveringId] = useState<string | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
+  const [trackingUrlInput, setTrackingUrlInput] = useState('');
 
   // Custom Category States
   const [categories, setCategories] = useState(['Tees', 'Hoodies']);
@@ -312,15 +316,43 @@ export function AdminPage() {
     await fetchProducts();
   };
 
-  const handleDispatch = async (id: string) => {
+  const handleDispatch = async (id: string, trackingUrl?: string) => {
+    // Couriers often hand out bare links ("delhivery.com/track/123"). Assume https
+    // so a missing scheme never silently fails the Edge Function's URL validation.
+    let url = (trackingUrl ?? '').trim();
+    if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`;
+
     setDispatchingId(id);
+    setError(null);
+    setStatus(null);
     const { data, error: fnError } = await supabase.functions.invoke('get-admin-orders', {
-      body: { action: 'dispatch', id },
+      body: { action: 'dispatch', id, tracking_url: url },
     });
     setDispatchingId(null);
     if (fnError || data?.error) return setError(await functionErrorMessage(fnError, data));
     setStatus('Order marked as dispatched');
+    setSelectedOrder(null);
+    setTrackingUrlInput('');
     await fetchOrders();
+  };
+
+  const handleDeliver = async (id: string) => {
+    setDeliveringId(id);
+    const { data, error: fnError } = await supabase.functions.invoke('get-admin-orders', {
+      body: { action: 'deliver', id },
+    });
+    setDeliveringId(null);
+    if (fnError || data?.error) return setError(await functionErrorMessage(fnError, data));
+    setStatus('Order marked as delivered');
+    setSelectedOrder(null);
+    await fetchOrders();
+  };
+
+  const openOrderDetails = (order: AdminOrder) => {
+    setError(null);
+    setStatus(null);
+    setTrackingUrlInput(order.tracking_url ?? '');
+    setSelectedOrder(order);
   };
 
   const handleDeleteOrder = async (id: string) => {
@@ -453,6 +485,7 @@ export function AdminPage() {
             <table className="w-full text-left text-sm">
               <thead className="bg-[#FBFBFB] uppercase text-xs">
                 <tr>
+                  <th className="p-3">Order ID</th>
                   <th className="p-3">Date</th>
                   <th className="p-3">Customer</th>
                   <th className="p-3">Amount</th>
@@ -463,22 +496,36 @@ export function AdminPage() {
               </thead>
               <tbody>
                 {ordersLoading && (
-                  <tr><td colSpan={6} className="p-3 text-center text-gray-500">Loading orders…</td></tr>
+                  <tr><td colSpan={7} className="p-3 text-center text-gray-500">Loading orders…</td></tr>
                 )}
                 {!ordersLoading && orders.length === 0 && (
-                  <tr><td colSpan={6} className="p-3 text-center text-gray-500">No orders yet.</td></tr>
+                  <tr><td colSpan={7} className="p-3 text-center text-gray-500">No orders yet.</td></tr>
                 )}
                 {orders.map((o) => (
                   <tr key={o.id} className="border-t border-[#E5E5E5]">
+                    <td className="p-3 font-semibold whitespace-nowrap">{o.order_number ?? '—'}</td>
                     <td className="p-3">{new Date(o.created_at).toLocaleDateString()}</td>
                     <td className="p-3">{o.customer_name} <br/><span className="text-xs text-gray-500">{o.phone}</span></td>
                     <td className="p-3 font-semibold">₹{o.total_amount}</td>
                     <td className="p-3 text-xs uppercase font-bold">{o.payment_method ?? '—'}</td>
                     <td className="p-3 uppercase text-xs font-bold">{o.status}</td>
-                    <td className="p-3 text-right flex justify-end gap-2">
-                       <button onClick={() => setSelectedOrder(o)} className="px-3 py-1 border text-xs uppercase">View Details</button>
-                       <button onClick={() => handleDispatch(o.id)} disabled={o.status === 'Dispatched'} className="px-3 py-1 border text-xs uppercase disabled:opacity-40">Mark Dispatched</button>
-                       <button onClick={() => handleDeleteOrder(o.id)} className="px-3 py-1 border text-red-600 text-xs uppercase">Delete</button>
+                    <td className="p-3">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => openOrderDetails(o)} className="px-3 py-1 border text-xs uppercase">View Details</button>
+                        {o.status !== 'Dispatched' && o.status !== 'Delivered' && (
+                          <button onClick={() => openOrderDetails(o)} className="px-3 py-1 border text-xs uppercase">Mark Dispatched</button>
+                        )}
+                        {o.status === 'Dispatched' && (
+                          <button
+                            onClick={() => handleDeliver(o.id)}
+                            disabled={deliveringId === o.id}
+                            className="px-3 py-1 border text-xs uppercase disabled:opacity-40"
+                          >
+                            {deliveringId === o.id ? 'Saving…' : 'Mark Delivered'}
+                          </button>
+                        )}
+                        <button onClick={() => handleDeleteOrder(o.id)} className="px-3 py-1 border text-red-600 text-xs uppercase">Delete</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -601,7 +648,13 @@ export function AdminPage() {
             </div>
 
             <div className="p-4 space-y-3 text-sm">
-              <Detail label="Order ID" value={selectedOrder.id} />
+              <div className="bg-[#F7F4EE] border border-[#C2A77A] px-4 py-3">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[#666666]">Order ID</div>
+                <div className="font-heading font-extrabold text-lg text-[#1A1A1A] break-all">
+                  {selectedOrder.order_number ?? '—'}
+                </div>
+              </div>
+              <Detail label="Internal ID" value={selectedOrder.id} />
               <Detail label="Date" value={new Date(selectedOrder.created_at).toLocaleString()} />
               <Detail label="Name" value={selectedOrder.customer_name} />
               <Detail label="Phone" value={selectedOrder.phone} />
@@ -610,17 +663,57 @@ export function AdminPage() {
               <Detail label="Total Amount" value={`₹${selectedOrder.total_amount}`} />
               <Detail label="Payment Method" value={selectedOrder.payment_method} />
               <Detail label="Status" value={selectedOrder.status} />
+              <Detail label="Tracking URL" value={selectedOrder.tracking_url} />
               <Detail label="Razorpay Payment ID" value={selectedOrder.razorpay_payment_id} />
             </div>
 
-            <div className="flex justify-end gap-2 p-4 border-t border-[#E5E5E5]">
-              <button
-                onClick={() => { void handleDispatch(selectedOrder.id); setSelectedOrder(null); }}
-                disabled={selectedOrder.status === 'Dispatched'}
-                className="px-4 py-2 border text-xs uppercase font-bold disabled:opacity-40"
-              >
-                Mark Dispatched
-              </button>
+            <div className="px-4 pb-4 space-y-2">
+              <Field label="Tracking URL (Courier Link)">
+                <input
+                  type="url"
+                  value={trackingUrlInput}
+                  onChange={(e) => setTrackingUrlInput(e.target.value)}
+                  placeholder="https://courier.com/track/..."
+                  className={inputClass}
+                />
+              </Field>
+              <p className="text-[11px] text-gray-500">
+                Paste the courier tracking link, then click “Mark Dispatched”. It powers the “Track Package”
+                button on the customer’s tracking page. Already dispatched? Paste the link and click “Save Tracking Link”.
+              </p>
+            </div>
+
+            {/* Feedback must live inside the modal: the page-level banner renders
+                behind this overlay, so a failed save would otherwise look silent. */}
+            {error && (
+              <p className="mx-4 mb-2 px-3 py-2 bg-red-50 border border-red-200 text-red-700 text-xs">
+                {error}
+              </p>
+            )}
+
+            <div className="flex flex-wrap justify-end gap-2 p-4 border-t border-[#E5E5E5]">
+              {selectedOrder.status !== 'Delivered' && (
+                <button
+                  onClick={() => void handleDispatch(selectedOrder.id, trackingUrlInput.trim())}
+                  disabled={dispatchingId === selectedOrder.id || (selectedOrder.status === 'Dispatched' && !trackingUrlInput.trim())}
+                  className="px-4 py-2 bg-[#1A1A1A] text-white text-xs uppercase font-bold disabled:opacity-40"
+                >
+                  {dispatchingId === selectedOrder.id
+                    ? 'Saving…'
+                    : selectedOrder.status === 'Dispatched'
+                      ? 'Save Tracking Link'
+                      : 'Mark Dispatched'}
+                </button>
+              )}
+              {selectedOrder.status === 'Dispatched' && (
+                <button
+                  onClick={() => void handleDeliver(selectedOrder.id)}
+                  disabled={deliveringId === selectedOrder.id}
+                  className="px-4 py-2 bg-[#1A1A1A] text-white text-xs uppercase font-bold disabled:opacity-40"
+                >
+                  {deliveringId === selectedOrder.id ? 'Saving…' : 'Mark Delivered'}
+                </button>
+              )}
               <button
                 onClick={() => {
                   if (selectedOrder.phone) window.open(`https://wa.me/${selectedOrder.phone.replace(/\D/g, '')}`, '_blank');
