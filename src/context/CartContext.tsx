@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product } from '../data/products';
 import { trackAddToCart } from '../lib/metaPixel';
+import { trackGa4AddToCart } from '../lib/ga4';
 
 export interface CartItem {
   product: Product;
@@ -60,6 +61,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
     setIsOpen(true);
     trackAddToCart(product, quantity);
+    trackGa4AddToCart(product, quantity);
   };
 
   const removeFromCart = (productId: string, size: string) => {

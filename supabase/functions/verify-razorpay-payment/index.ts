@@ -5,23 +5,43 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+// Origins that must always work, so a stale ALLOWED_ORIGINS secret or a domain
+// change can never silently break payment verification the way the old fallback
+// did. The vercel.app entry is kept during the move to the custom domain.
+const ALWAYS_ALLOWED_ORIGINS = [
+  'https://yusrcollection.store',
+  'https://www.yusrcollection.store',
+  'https://yusr-collection-hj48.vercel.app',
+  'http://localhost:3000',
+];
+
+const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type';
+
 function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin') ?? '';
-  const allowed = (Deno.env.get('ALLOWED_ORIGINS') ?? '*')
+  const configured = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
 
-  return {
-    'Access-Control-Allow-Origin': allowed.includes('*')
-      ? origin || '*'
-      : allowed.includes(origin)
-        ? origin
-        : allowed[0],
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  // Unset or an explicit '*' means "accept whatever the caller sent".
+  const reflectAny = configured.length === 0 || configured.includes('*');
+  const allowed = new Set([...ALWAYS_ALLOWED_ORIGINS, ...configured]);
+
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Headers': ALLOW_HEADERS,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
+
+  // Always echo the caller's own origin. Echoing a fixed fallback origin is
+  // exactly what made preflight pass while the real request was blocked.
+  if (reflectAny || allowed.has(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin || '*';
+  }
+
+  return headers;
 }
 
 function json(body: unknown, status: number, headers: Record<string, string>) {

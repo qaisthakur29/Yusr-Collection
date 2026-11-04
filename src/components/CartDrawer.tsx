@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabaseClient';
 import { optimizeImage } from '../lib/image';
 import { trackInitiateCheckout, trackPurchase, type PixelLine } from '../lib/metaPixel';
+import { trackGa4BeginCheckout, trackGa4Purchase } from '../lib/ga4';
 
 declare global {
   interface Window {
@@ -116,6 +117,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
       setOrderSuccess(true);
       // Order row is in Supabase and COD is confirmed, so this counts as a sale.
       trackPurchase(pixelLines, orderTotal);
+      trackGa4Purchase(pixelLines, orderTotal, orderId);
       setTimeout(() => {
         openWhatsApp(orderId);
         clearCart();
@@ -183,6 +185,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
         setOrderSuccess(true);
         // Only after the signature check passed and the order row was written.
         trackPurchase(pixelLines, orderTotal);
+        trackGa4Purchase(pixelLines, orderTotal, verified.order_id);
         setTimeout(() => {
           openWhatsApp(verified.order_id, response.razorpay_payment_id);
           clearCart();
@@ -554,6 +557,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                 <button
                   onClick={() => {
                     trackInitiateCheckout(pixelLines, subtotal);
+                    trackGa4BeginCheckout(pixelLines, subtotal);
                     setIsCheckingOut(true);
                   }}
                   className="w-full min-h-[48px] py-3.5 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm uppercase tracking-[0.05em] transition-colors flex items-center justify-center gap-2 shadow-sm"
