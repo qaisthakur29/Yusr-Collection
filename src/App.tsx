@@ -6,7 +6,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { HomePage } from './pages/HomePage';
 import { Product, fetchProductBySlug, fetchProductsFromDB } from './data/products';
 import { trackPageView } from './lib/metaPixel';
-import { applyProductSeo, applyStaticSeo } from './lib/seo';
+import { applyNotFoundSeo, applyProductSeo, applyStaticSeo, isKnownRoute } from './lib/seo';
 
 declare global {
   interface Window {
@@ -40,6 +40,9 @@ const HtmlSitemapPage = lazy(() =>
   import('./pages/HtmlSitemapPage').then((m) => ({ default: m.HtmlSitemapPage })),
 );
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })));
+const NotFoundPage = lazy(() =>
+  import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
+);
 
 function productSlugFromPath(path: string): string | null {
   if (!path.startsWith('/product/')) return null;
@@ -137,11 +140,19 @@ export default function App() {
       const slug = productSlugFromPath(currentPath);
       if (selectedProduct && slug && selectedProduct.slug === slug) {
         applyProductSeo(selectedProduct);
+      } else if (productStatus === 'missing') {
+        // Dead product URL: mark it noindex so Google drops it instead of
+        // indexing a 200 page that only says "not found".
+        applyNotFoundSeo();
       }
       return;
     }
+    if (!isKnownRoute(currentPath)) {
+      applyNotFoundSeo();
+      return;
+    }
     applyStaticSeo(currentPath);
-  }, [currentPath, selectedProduct]);
+  }, [currentPath, selectedProduct, productStatus]);
 
   // Handle browser popstate (back / forward buttons)
   useEffect(() => {
@@ -182,17 +193,12 @@ export default function App() {
             key={selectedProduct.slug}
             product={selectedProduct}
             onNavigate={navigateTo}
-            onBack={() => navigateTo('/shop')}
           />
         );
       }
 
       if (productStatus === 'missing') {
-        return (
-          <div className="min-h-[40vh] flex items-center justify-center">
-            <p className="text-sm text-[#666666] font-body">Product not found.</p>
-          </div>
-        );
+        return <NotFoundPage onNavigate={navigateTo} />;
       }
 
       return (
@@ -231,8 +237,9 @@ export default function App() {
       case '/admin':
         return <AdminPage />;
       case '/':
-      default:
         return <HomePage onNavigate={navigateTo} onSelectProduct={handleSelectProduct} />;
+      default:
+        return <NotFoundPage onNavigate={navigateTo} />;
     }
   };
 

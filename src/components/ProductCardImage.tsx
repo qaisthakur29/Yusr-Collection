@@ -60,7 +60,11 @@ export function ProductCardImage({ product, children }: ProductCardImageProps) {
           <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
             <img
               src={optimizeImage(img)}
-              alt={`${product.name} ${idx + 1}`}
+              alt={
+                idx === 0
+                  ? `${product.name} — Yusr Collection oversized tee`
+                  : `${product.name} — Yusr Collection oversized tee (view ${idx + 1})`
+              }
               loading="lazy"
               decoding="async"
               referrerPolicy="no-referrer"

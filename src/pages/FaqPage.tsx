@@ -1,28 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, MessageCircle } from 'lucide-react';
-
-const FAQS = [
-  {
-    q: 'Q1. How long will it take to deliver my order?',
-    a: 'Since every piece is made-to-order and custom-printed just for you, it takes 3-5 days for printing and packing. After that, shipping takes 4-7 days. Total time: 7-10 working days.',
-  },
-  {
-    q: 'Q2. Do you offer Cash on Delivery (COD)?',
-    a: 'Yes, COD is available across India. However, we highly recommend Prepaid orders (UPI/Card) to get an extra ₹50 discount and faster processing.',
-  },
-  {
-    q: 'Q3. How do I choose the right size?',
-    a: 'Our tees have an oversized, drop-shoulder fit. Please refer to our Size Chart on the product page before ordering. If you are in between sizes or prefer a regular fit, we suggest sizing down.',
-  },
-  {
-    q: 'Q4. Can I cancel my order?',
-    a: 'Orders can only be cancelled within 12 hours of placing them. Once the printing process starts (which is usually within 24 hours), cancellations are not possible as the product is custom-made.',
-  },
-  {
-    q: 'Q5. Will the print fade after washing?',
-    a: 'No. We use premium DTG/DTF printing. Wash inside out in cold water, and do not iron directly on the print. It will last a long time.',
-  },
-];
+import { FAQ_ITEMS } from '../lib/seo';
 
 export function FaqPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
@@ -50,7 +28,7 @@ export function FaqPage() {
 
         {/* FAQ Accordion List */}
         <div className="divide-y divide-[#E5E5E5] border border-[#E5E5E5]">
-          {FAQS.map((faq, idx) => {
+          {FAQ_ITEMS.map((faq, idx) => {
             const isOpen = openIndex === idx;
             return (
               <div key={idx} className="bg-white">
@@ -60,7 +38,7 @@ export function FaqPage() {
                   className="w-full py-5 px-5 text-left flex items-center justify-between gap-4 transition-colors hover:bg-neutral-50"
                 >
                   <span className="font-heading font-bold text-xs sm:text-sm uppercase tracking-wide text-[#1A1A1A]">
-                    {faq.q}
+                    Q{idx + 1}. {faq.q}
                   </span>
                   <ChevronDown
                     className={`w-4 h-4 text-[#C2A77A] shrink-0 transition-transform duration-200 ${

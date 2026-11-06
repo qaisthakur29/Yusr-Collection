@@ -50,10 +50,13 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
       {/* 1. HERO SECTION BANNER */}
       {/* Anchored with object-top and responsive height (h-[60vh] md:h-[80vh]) to prevent top logo cropping */}
       <section className="relative w-full h-[60vh] sm:h-[70vh] md:h-[80vh] min-h-[420px] max-h-[850px] bg-[#121212] overflow-hidden flex flex-col justify-end">
+        {/* The page's single H1. The hero is artwork with no headline of its own,
+            so the brand value proposition lives here as the page heading. */}
+        <h1 className="sr-only">Premium Islamic Streetwear for the Believers</h1>
         {/* Full Banner Image with object-top guarantee */}
         <img
           src={optimizeImage('/assets/aistudio/HERO_SECTION_BANNER_83e65a6d.jpg', 1600)}
-          alt="Yusr Collection"
+          alt="Yusr Collection — premium Islamic streetwear oversized tees"
           loading="eager"
           decoding="async"
           fetchPriority="high"
@@ -68,13 +71,17 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
 
         {/* ONLY KEEP THE SHOP NOW BUTTON - Beautifully centered */}
         <div className="relative z-10 w-full pb-10 sm:pb-12 md:pb-16 flex justify-center px-4">
-          <button
-            onClick={() => onNavigate('/shop')}
+          <a
+            href="/shop"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/shop');
+            }}
             className="min-h-[48px] px-10 sm:px-14 py-3.5 sm:py-4 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm tracking-[0.08em] uppercase transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.99]"
           >
             <span>SHOP NOW</span>
             <ArrowRight className="w-4 h-4 text-[#111111]" />
-          </button>
+          </a>
         </div>
       </section>
 
@@ -123,13 +130,17 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
               FEATURED COLLECTION
             </h2>
           </div>
-          <button
-            onClick={() => onNavigate('/shop')}
+          <a
+            href="/shop"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/shop');
+            }}
             className="text-xs font-heading font-bold tracking-wider uppercase text-[#1A1A1A] hover:text-[#C2A77A] flex items-center gap-1.5 min-h-[44px]"
           >
             <span>View All</span>
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </a>
         </div>
 
         {/* Product Grid: 2 columns on mobile, 4 on desktop */}
@@ -168,7 +179,19 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
                       {product.tag || product.category}
                     </span>
                     <h3 className="font-heading font-semibold text-sm sm:text-base text-[#1A1A1A] uppercase tracking-[0.02em] mt-0.5 group-hover:text-[#C2A77A] transition-colors line-clamp-1">
-                      {product.name}
+                      {/* A real <a> so Googlebot can follow the product URL; the
+                          card's own onClick is kept for the whole-card tap area. */}
+                      <a
+                        href={`/product/${product.slug}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onSelectProduct(product);
+                        }}
+                        className="block truncate"
+                      >
+                        {product.name}
+                      </a>
                     </h3>
                   </div>
 
@@ -237,12 +260,16 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
           <p className="font-body text-neutral-300 text-sm sm:text-base md:text-lg max-w-2xl mx-auto mb-8 leading-relaxed">
             Streetwear culture became loud and vulgar. There was a void for clothing that felt aggressive and premium on the streets, yet stayed completely grounded in Islamic modesty. We fill that void.
           </p>
-          <button
-            onClick={() => onNavigate('/about')}
-            className="min-h-[48px] px-8 py-3.5 bg-transparent border-2 border-[#C2A77A] text-[#C2A77A] hover:bg-[#C2A77A] hover:text-[#111111] font-heading font-bold text-xs sm:text-sm uppercase tracking-[0.05em] transition-all"
+          <a
+            href="/about"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/about');
+            }}
+            className="min-h-[48px] px-8 py-3.5 bg-transparent border-2 border-[#C2A77A] text-[#C2A77A] hover:bg-[#C2A77A] hover:text-[#111111] font-heading font-bold text-xs sm:text-sm uppercase tracking-[0.05em] transition-all inline-flex items-center justify-center"
           >
             READ THE FOUNDER'S STORY
-          </button>
+          </a>
         </div>
       </section>
 

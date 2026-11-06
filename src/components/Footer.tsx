@@ -6,6 +6,9 @@ interface FooterProps {
   onNavigate: (path: string) => void;
 }
 
+// Shared styling for the footer's in-app links.
+const FOOTER_LINK = 'text-[#666666] hover:text-[#1A1A1A] transition-colors py-1 text-left';
+
 export function Footer({ onNavigate }: FooterProps) {
   const handleLinkClick = (path: string) => {
     onNavigate(path);
@@ -76,7 +79,7 @@ export function Footer({ onNavigate }: FooterProps) {
             >
               <img
                 src={optimizeImage('/assets/aistudio/YUSR_COLLECTION_REMOVED_BG_LOGO_82f5c6c0.png', 200)}
-                alt="Yusr Collection"
+                alt="Yusr Collection logo"
                 loading="lazy"
                 decoding="async"
                 className="h-10 w-auto object-contain"
@@ -96,22 +99,32 @@ export function Footer({ onNavigate }: FooterProps) {
             <div className="font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]">
               Shop
             </div>
+            {/* Real <a href> elements: Googlebot follows these site-wide links,
+                while the click handler keeps navigation inside the SPA. */}
             <ul className="space-y-2 text-sm font-medium">
               <li>
-                <button
-                  onClick={() => handleLinkClick('/shop')}
-                  className="text-[#666666] hover:text-[#1A1A1A] transition-colors py-1 text-left"
+                <a
+                  href="/shop"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleLinkClick('/shop');
+                  }}
+                  className={FOOTER_LINK}
                 >
                   Shop
-                </button>
+                </a>
               </li>
               <li>
-                <button
-                  onClick={() => handleLinkClick('/track-order')}
-                  className="text-[#666666] hover:text-[#1A1A1A] transition-colors py-1 text-left"
+                <a
+                  href="/track-order"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleLinkClick('/track-order');
+                  }}
+                  className={FOOTER_LINK}
                 >
                   Track Order
-                </button>
+                </a>
               </li>
             </ul>
           </div>
@@ -122,62 +135,28 @@ export function Footer({ onNavigate }: FooterProps) {
               Information
             </div>
             <ul className="space-y-2 text-sm font-medium">
-              <li>
-                <button
-                  onClick={() => handleLinkClick('/about')}
-                  className="text-[#666666] hover:text-[#1A1A1A] transition-colors py-1 text-left"
-                >
-                  Our Story
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleLinkClick('/faq')}
-                  className="text-[#666666] hover:text-[#1A1A1A] transition-colors py-1 text-left"
-                >
-                  FAQ
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleLinkClick('/contact')}
-                  className="text-[#666666] hover:text-[#1A1A1A] transition-colors py-1 text-left"
-                >
-                  Contact
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleLinkClick('/returns')}
-                  className="text-[#666666] hover:text-[#1A1A1A] transition-colors py-1 text-left"
-                >
-                  Returns & Exchange
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleLinkClick('/policy')}
-                  className="text-[#666666] hover:text-[#1A1A1A] transition-colors py-1 text-left"
-                >
-                  Privacy Policy
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleLinkClick('/terms')}
-                  className="text-[#666666] hover:text-[#1A1A1A] transition-colors py-1 text-left"
-                >
-                  Terms & Conditions
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleLinkClick('/html-sitemap')}
-                  className="text-[#666666] hover:text-[#1A1A1A] transition-colors py-1 text-left"
-                >
-                  Site Map
-                </button>
-              </li>
+              {[
+                { path: '/about', label: 'Our Story' },
+                { path: '/faq', label: 'FAQ' },
+                { path: '/contact', label: 'Contact' },
+                { path: '/returns', label: 'Returns & Exchange' },
+                { path: '/policy', label: 'Privacy Policy' },
+                { path: '/terms', label: 'Terms & Conditions' },
+                { path: '/html-sitemap', label: 'Site Map' },
+              ].map((link) => (
+                <li key={link.path}>
+                  <a
+                    href={link.path}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleLinkClick(link.path);
+                    }}
+                    className={FOOTER_LINK}
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 

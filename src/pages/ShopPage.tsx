@@ -178,7 +178,18 @@ export function ShopPage({ onSelectProduct }: ShopPageProps) {
                       {product.tag || product.category}
                     </span>
                     <h2 className="font-heading font-semibold text-sm sm:text-base text-[#1A1A1A] uppercase tracking-[0.02em] mt-0.5 group-hover:text-[#C2A77A] transition-colors line-clamp-1">
-                      {product.name}
+                      {/* A real <a> so Googlebot can follow the product URL. */}
+                      <a
+                        href={`/product/${product.slug}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onSelectProduct(product);
+                        }}
+                        className="block truncate"
+                      >
+                        {product.name}
+                      </a>
                     </h2>
                   </div>
 

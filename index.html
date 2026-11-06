@@ -9,14 +9,14 @@
          these per route at runtime, so they must match the '/' entry there. -->
     <link rel="canonical" href="https://yusrcollection.store/" />
     <meta property="og:title" content="YUSR COLLECTION | Premium Islamic Streetwear" />
-    <meta property="og:description" content="Rooted in Faith. Built on Struggles. Premium 240 GSM oversized streetwear." />
+    <meta property="og:description" content="Rooted in Faith. Built on Struggles. Premium, heavyweight 240 GSM modest streetwear crafted for the believers." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://yusrcollection.store/" />
     <meta property="og:site_name" content="YUSR COLLECTION" />
     <meta property="og:image" content="https://yusrcollection.store/assets/aistudio/HERO_SECTION_BANNER_83e65a6d.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="YUSR COLLECTION | Premium Islamic Streetwear" />
-    <meta name="twitter:description" content="Rooted in Faith. Built on Struggles. Premium 240 GSM oversized streetwear." />
+    <meta name="twitter:description" content="Rooted in Faith. Built on Struggles. Premium, heavyweight 240 GSM modest streetwear crafted for the believers." />
     <meta name="twitter:image" content="https://yusrcollection.store/assets/aistudio/HERO_SECTION_BANNER_83e65a6d.jpg" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,12 +67,11 @@
         src="https://www.facebook.com/tr?id=2383915162384483&ev=PageView&noscript=1"
         alt="" />
     </noscript>
-    <div id="root"><!-- Static H1 for crawlers. The SPA renders its hero as an image
-      with no heading, so without this the raw HTML would ship no H1 at all. React
-      only clears a root container's children during a View Transition (the
-      Snapshot flag), so this node survives the client render. Inline styles rather
-      than a utility class: the raw HTML has to be self-contained for crawlers that
-      never load the CSS bundle. -->
+    <div id="root"><!-- Static H1 for crawlers that do not execute JavaScript.
+      React replaces everything inside #root on its first render, so this node is
+      a pre-hydration fallback only — the homepage's persistent H1 is rendered by
+      HomePage.tsx. Inline styles rather than a utility class: the raw HTML has to
+      be self-contained for crawlers that never load the CSS bundle. -->
       <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">Premium Islamic Streetwear for the Believers</h1>
     </div>
     <script type="module" src="/src/main.tsx"></script>

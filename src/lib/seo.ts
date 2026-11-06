@@ -106,6 +106,32 @@ export const PUBLIC_ROUTES: { path: string; label: string }[] = [
   { path: '/html-sitemap', label: 'Site Map' },
 ];
 
+// Single source of truth for the FAQ page. FaqPage renders these strings and
+// applyStaticSeo turns the same array into FAQPage structured data, so the
+// visible copy and the schema can never drift apart.
+export const FAQ_ITEMS: { q: string; a: string }[] = [
+  {
+    q: 'How long will it take to deliver my order?',
+    a: 'Since every piece is made-to-order and custom-printed just for you, it takes 3-5 days for printing and packing. After that, shipping takes 4-7 days. Total time: 7-10 working days.',
+  },
+  {
+    q: 'Do you offer Cash on Delivery (COD)?',
+    a: 'Yes, COD is available across India. However, we highly recommend Prepaid orders (UPI/Card) to get an extra ₹50 discount and faster processing.',
+  },
+  {
+    q: 'How do I choose the right size?',
+    a: 'Our tees have an oversized, drop-shoulder fit. Please refer to our Size Chart on the product page before ordering. If you are in between sizes or prefer a regular fit, we suggest sizing down.',
+  },
+  {
+    q: 'Can I cancel my order?',
+    a: 'Orders can only be cancelled within 12 hours of placing them. Once the printing process starts (which is usually within 24 hours), cancellations are not possible as the product is custom-made.',
+  },
+  {
+    q: 'Will the print fade after washing?',
+    a: 'No. We use premium DTG/DTF printing. Wash inside out in cold water, and do not iron directly on the print. It will last a long time.',
+  },
+];
+
 // ---------------------------------------------------------------------------
 // <head> helpers
 // ---------------------------------------------------------------------------
@@ -247,6 +273,23 @@ function productSchema(
   };
 }
 
+/**
+ * FAQ rich-result schema. Google expects each `acceptedAnswer` to match text
+ * that is actually visible on the page, which is why this reads from the same
+ * FAQ_ITEMS array the FaqPage renders.
+ */
+function faqSchema(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ_ITEMS.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  };
+}
+
 interface SeoInput {
   title: string;
   description: string;
@@ -255,6 +298,8 @@ interface SeoInput {
   type?: 'website' | 'product';
   /** Structured data for this route, or null to clear whatever was set before. */
   jsonLd?: Record<string, unknown> | null;
+  /** robots directive. Defaults to indexable; soft-404s opt out. */
+  robots?: string;
 }
 
 function applySeo({
@@ -264,6 +309,7 @@ function applySeo({
   image,
   type = 'website',
   jsonLd = null,
+  robots = 'index,follow',
 }: SeoInput): void {
   const ogImage = image ? absoluteUrl(image) : DEFAULT_OG_IMAGE;
 
@@ -271,6 +317,7 @@ function applySeo({
   upsertCanonical(canonical);
 
   upsertMeta('name', 'description', description);
+  upsertMeta('name', 'robots', robots);
   upsertMeta('name', 'twitter:card', 'summary_large_image');
   upsertMeta('name', 'twitter:title', title);
   upsertMeta('name', 'twitter:description', description);
@@ -292,24 +339,51 @@ export function staticCanonical(path: string): string {
 }
 
 /**
- * Applies the metadata for a static route. Unknown paths fall back to the
- * homepage copy and canonicalise to '/', which is the standard soft-404 signal.
+ * Applies the metadata for a known static route. Unknown paths are handled by
+ * applyNotFoundSeo so they never canonicalise into the homepage's index entry.
  */
 export function applyStaticSeo(path: string): void {
   const seo = STATIC_ROUTE_SEO[path] ?? HOME_SEO;
+
+  // Organization + WebSite belong to the site as a whole, so only the homepage
+  // carries them. /faq owns a FAQPage node. Every other route explicitly clears
+  // whatever structured data ran before.
+  let jsonLd: Record<string, unknown> | null = null;
+  if (path === '/') {
+    jsonLd = {
+      '@context': 'https://schema.org',
+      '@graph': [organizationSchema(), websiteSchema()],
+    };
+  } else if (path === '/faq') {
+    jsonLd = faqSchema();
+  }
+
   applySeo({
     title: seo.title,
     description: seo.description,
     canonical: STATIC_ROUTE_SEO[path] ? staticCanonical(path) : staticCanonical('/'),
-    // Organization + WebSite belong to the site as a whole, so only the homepage
-    // carries them; every other route explicitly clears whatever ran before.
-    jsonLd:
-      path === '/'
-        ? {
-            '@context': 'https://schema.org',
-            '@graph': [organizationSchema(), websiteSchema()],
-          }
-        : null,
+    jsonLd,
+  });
+}
+
+/** True when the app can render a real page for this path. */
+export function isKnownRoute(path: string): boolean {
+  return path === '/' || path in STATIC_ROUTE_SEO;
+}
+
+/**
+ * Metadata for a URL that matches no route, or a product slug that does not
+ * exist. The storefront is client-rendered, so the server has already answered
+ * 200 — `noindex` is what keeps this soft 404 out of the index, and the
+ * canonical points at the homepage rather than at the dead URL.
+ */
+export function applyNotFoundSeo(): void {
+  applySeo({
+    title: 'Page Not Found | YUSR COLLECTION',
+    description:
+      'The page you are looking for does not exist. Browse the YUSR COLLECTION catalogue or head back to the homepage.',
+    canonical: staticCanonical('/'),
+    robots: 'noindex,follow',
   });
 }
 

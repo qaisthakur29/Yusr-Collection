@@ -169,6 +169,11 @@ function buildProductHtml(template: string, product: PrerenderProduct): string {
   html = setMetaTag(html, 'name', 'twitter:title', title);
   html = setMetaTag(html, 'name', 'twitter:description', description);
   html = setMetaTag(html, 'name', 'twitter:image', image);
+  // The template's hero preload and /shop prefetch belong to the landing page.
+  // Left in place they would make every product URL fetch a 1600px banner it
+  // never renders, hurting LCP on exactly the pages that sell.
+  html = html.replace(/\s*<link rel="preload" as="image"[^>]*>/gi, '');
+  html = html.replace(/\s*<link rel="prefetch"[^>]*>/gi, '');
   return html;
 }
 

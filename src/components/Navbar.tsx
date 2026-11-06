@@ -78,7 +78,7 @@ export function Navbar({ currentPath, onNavigate }: NavbarProps) {
             >
               <img
                 src={optimizeImage('/assets/aistudio/YUSR_COLLECTION_REMOVED_BG_LOGO_82f5c6c0.png', 200)}
-                alt="Yusr Collection"
+                alt="Yusr Collection logo"
                 loading="lazy"
                 decoding="async"
                 className="h-9 sm:h-11 w-auto object-contain transition-transform group-hover:scale-[1.02]"
@@ -122,7 +122,7 @@ export function Navbar({ currentPath, onNavigate }: NavbarProps) {
                 <div className="px-6 py-5 border-b border-[#E5E5E5] flex items-center justify-between">
                   <img
                     src={optimizeImage('/assets/aistudio/YUSR_COLLECTION_REMOVED_BG_LOGO_82f5c6c0.png', 200)}
-                    alt="Yusr Collection"
+                    alt="Yusr Collection logo"
                     loading="lazy"
                     decoding="async"
                     className="h-8 w-auto object-contain"

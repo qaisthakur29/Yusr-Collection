@@ -19,7 +19,6 @@ import {
 interface ProductDetailPageProps {
   product: Product;
   onNavigate: (path: string) => void;
-  onBack: () => void;
 }
 
 // Markdown output styling for the product description: Montserrat (font-heading)
@@ -58,7 +57,7 @@ const MARKDOWN_COMPONENTS: Components = {
   ),
 };
 
-export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetailPageProps) {
+export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProps) {
   const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L' | 'XL' | 'XXL'>('L');
   const [activeImage, setActiveImage] = useState(product.image);
@@ -118,13 +117,28 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
         <div className="flex items-center justify-between text-xs text-[#666666]">
           <div className="flex items-center gap-2 font-heading uppercase tracking-wider">
-            <button onClick={onBack} className="hover:text-[#1A1A1A] underline">
+            {/* Real anchors so the breadcrumb trail is crawlable. */}
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('/');
+              }}
+              className="hover:text-[#1A1A1A] underline"
+            >
               Home
-            </button>
+            </a>
             <span>/</span>
-            <button onClick={() => onNavigate('/shop')} className="hover:text-[#1A1A1A] underline">
+            <a
+              href="/shop"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('/shop');
+              }}
+              className="hover:text-[#1A1A1A] underline"
+            >
               Catalog
-            </button>
+            </a>
             <span>/</span>
             <span className="text-[#1A1A1A] font-semibold truncate max-w-[150px] sm:max-w-none">
               {product.name}
@@ -148,10 +162,13 @@ export function ProductDetailPage({ product, onNavigate, onBack }: ProductDetail
           {/* Left Column: Image Gallery */}
           <div className="space-y-4">
             <div className="relative aspect-[4/5] w-full bg-[#F5F5F5] border border-[#E5E5E5] overflow-hidden">
+              {/* The product hero is this page's LCP element, so unlike the
+                  below-the-fold gallery images it must load eagerly. */}
               <img
                 src={optimizeImage(activeImage, 1000)}
-                alt={product.name}
-                loading="lazy"
+                alt={`${product.name} — Yusr Collection oversized tee`}
+                loading="eager"
+                fetchPriority="high"
                 decoding="async"
                 className="w-full h-full object-cover object-center"
                 referrerPolicy="no-referrer"
