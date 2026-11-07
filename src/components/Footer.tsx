@@ -1,5 +1,14 @@
 import React from 'react';
-import { Mail, MessageCircle, ArrowUpRight, ShieldCheck, RefreshCw, Truck } from 'lucide-react';
+import {
+  Mail,
+  MessageCircle,
+  ArrowUpRight,
+  ShieldCheck,
+  RefreshCw,
+  Truck,
+  Instagram,
+  Facebook,
+} from 'lucide-react';
 import { optimizeImage } from '../lib/image';
 
 interface FooterProps {
@@ -190,6 +199,33 @@ export function Footer({ onNavigate }: FooterProps) {
             <p className="text-[11px] text-[#888888] pt-2">
               (No physical walk-in store. Centralized dispatch via fulfillment partners).
             </p>
+
+            {/* Socials */}
+            <div className="pt-3 space-y-2">
+              <div className="font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]">
+                Follow Us
+              </div>
+              <div className="flex items-center gap-3 text-[#1A1A1A]">
+                <a
+                  href="https://www.instagram.com/yusrcollection29"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Yusr Collection on Instagram"
+                  className="flex items-center justify-center w-10 h-10 rounded-full border border-current hover:border-[#C2A77A] hover:text-[#C2A77A] transition-colors duration-300"
+                >
+                  <Instagram className="w-4 h-4" />
+                </a>
+                <a
+                  href="https://www.facebook.com/yusrcollection"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Yusr Collection on Facebook"
+                  className="flex items-center justify-center w-10 h-10 rounded-full border border-current hover:border-[#C2A77A] hover:text-[#C2A77A] transition-colors duration-300"
+                >
+                  <Facebook className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
           </div>
         </div>
 
