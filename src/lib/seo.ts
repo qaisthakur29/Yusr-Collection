@@ -28,6 +28,8 @@ export const DEFAULT_OG_IMAGE = `${SITE_URL}/assets/aistudio/HERO_SECTION_BANNER
 export interface PageSeo {
   title: string;
   description: string;
+  /** robots directive for this route. Defaults to indexable when omitted. */
+  robots?: string;
 }
 
 const HOME_SEO: PageSeo = {
@@ -84,11 +86,13 @@ export const STATIC_ROUTE_SEO: Record<string, PageSeo> = {
     description:
       'A plain list of every page on YUSR COLLECTION, including all current products.',
   },
-  // Not listed publicly (robots.txt disallows it) but it still gets its own
-  // canonical so a signed-in admin never canonicalises to the homepage.
-  '/admin': {
+  // Obfuscated route, disallowed in robots.txt and noindexed here so a stray
+  // crawl can never surface the sign-in gate. It still gets its own canonical so
+  // a signed-in admin never canonicalises to the homepage.
+  '/yusr-manage-9821': {
     title: 'Admin | YUSR COLLECTION',
     description: 'Internal order and catalogue management for YUSR COLLECTION.',
+    robots: 'noindex,nofollow',
   },
 };
 
@@ -363,6 +367,9 @@ export function applyStaticSeo(path: string): void {
     description: seo.description,
     canonical: STATIC_ROUTE_SEO[path] ? staticCanonical(path) : staticCanonical('/'),
     jsonLd,
+    // Forwarded so a route can opt out of indexing (currently the obfuscated
+    // admin route). Routes without a directive stay indexable.
+    robots: seo.robots,
   });
 }
 

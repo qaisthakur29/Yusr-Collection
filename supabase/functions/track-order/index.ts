@@ -56,10 +56,65 @@ function json(body: unknown, status: number, headers: Record<string, string>) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Rate limiting
+// ---------------------------------------------------------------------------
+//
+// A public lookup endpoint is an obvious target for enumeration and scraping,
+// which burns Supabase invocations. This is a best-effort, per-instance limiter:
+// an Edge Function instance keeps its module scope alive between requests, so
+// this Map survives long enough to blunt a single client's burst — but it is NOT
+// a global quota. Supabase may serve requests from several instances, and a cold
+// start resets the counters. For a hard, cluster-wide limit, back this with a
+// shared store (e.g. Upstash Redis) or a Postgres counter table.
+const RATE_LIMIT_MAX = 5; // requests...
+const RATE_LIMIT_WINDOW_MS = 60_000; // ...per IP per minute.
+
+const hits = new Map<string, { count: number; resetAt: number }>();
+
+/** Client IP as reported by the platform's proxy, best-effort. */
+function clientIp(req: Request): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return req.headers.get('x-real-ip') ?? req.headers.get('cf-connecting-ip') ?? 'unknown';
+}
+
+/** Consumes one unit of the caller's quota. False once the window is exhausted. */
+function allowRequest(ip: string): boolean {
+  const now = Date.now();
+  const entry = hits.get(ip);
+
+  if (!entry || now >= entry.resetAt) {
+    hits.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    // Opportunistic sweep so the Map cannot grow without bound across many IPs.
+    if (hits.size > 1000) {
+      for (const [key, value] of hits) {
+        if (now >= value.resetAt) hits.delete(key);
+      }
+    }
+    return true;
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count += 1;
+  return true;
+}
+
 Deno.serve(async (req) => {
   const headers = corsHeaders(req);
   if (req.method === 'OPTIONS') return new Response('ok', { headers });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405, headers);
+
+  // Throttle before touching the database or parsing the body so a flood costs
+  // as little as possible.
+  const ip = clientIp(req);
+  if (!allowRequest(ip)) {
+    return json(
+      { error: 'Too many requests. Please wait a minute and try again.' },
+      429,
+      { ...headers, 'Retry-After': '60' },
+    );
+  }
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');

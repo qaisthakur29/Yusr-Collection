@@ -127,13 +127,18 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
       return;
     }
 
-    // ---------- Prepaid: create the Razorpay order, save only after payment succeeds ----------
-    // DB prices are numeric and can be fractional, but the Edge Function only
-    // accepts an integer rupee amount.
-    const orderNumber = `YUSR-${Math.floor(100000 + Math.random() * 900000)}`;
-
+    // ---------- Prepaid: create the Razorpay order, confirm after payment ----------
+    // Only product ids and quantities go up: the Edge Function prices them from
+    // the catalogue, so the browser cannot influence what it is charged. It also
+    // writes the Pending order the payment is later verified against.
     const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
-      body: { amount: Math.round(orderTotal) },
+      body: {
+        items: items.map((item) => ({ id: item.product.id, quantity: item.quantity })),
+        customer_name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        address: fullAddress,
+      },
     });
 
     if (error || !data) {
@@ -141,6 +146,11 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
       setPlacingOrder(false);
       return;
     }
+
+    // Set the moment the payment handler runs. Razorpay also fires `ondismiss`
+    // when the modal closes after a successful payment, so the cleanup below
+    // must not delete a Pending order that is already being verified.
+    let paymentCompleted = false;
 
     const options = {
       key: import.meta.env.VITE_RAZORPAY_KEY_ID,
@@ -160,8 +170,10 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
         razorpay_order_id: string;
         razorpay_signature: string;
       }) {
+        paymentCompleted = true;
         // Never trust the browser for payment status: the Edge Function verifies
-        // the HMAC signature and writes the order itself.
+        // the HMAC signature, re-checks the captured amount against the Pending
+        // order, and marks it paid itself.
         const { data: verified, error: verifyError } = await supabase.functions.invoke(
           'verify-razorpay-payment',
           {
@@ -169,11 +181,6 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              order_number: orderNumber,
-              customer_name: formData.name.trim(),
-              phone: formData.phone.trim(),
-              email: formData.email.trim(),
-              address: fullAddress,
             },
           },
         );
@@ -192,14 +199,31 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
         trackPurchase(pixelLines, orderTotal);
         trackGa4Purchase(pixelLines, orderTotal, verified.order_id);
         setTimeout(() => {
-          openWhatsApp(verified.order_number ?? orderNumber, response.razorpay_payment_id);
+          openWhatsApp(
+            verified.order_number ?? data.order_number ?? '—',
+            response.razorpay_payment_id,
+          );
           clearCart();
         }, 1500);
       },
       modal: {
         ondismiss: function () {
           setPlacingOrder(false); // Stop loading state if user cancels
+
+          // A completed payment also closes the modal, so never clean up once
+          // the handler has started verifying — that order is about to be paid.
+          if (paymentCompleted) return;
+
           setCheckoutError('Payment cancelled. You can try again.');
+
+          // The customer abandoned checkout, so the 'Pending' row
+          // create-razorpay-order wrote is an orphan. Best-effort cleanup: the
+          // function only deletes orders still 'Pending' for this exact Razorpay
+          // order, so a paid order (or a COD one, which has no razorpay_order_id)
+          // can never be removed by this call.
+          void supabase.functions
+            .invoke('delete-pending-order', { body: { razorpay_order_id: data.order_id } })
+            .catch(() => {});
         },
       },
     };

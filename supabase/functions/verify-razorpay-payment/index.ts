@@ -1,7 +1,9 @@
-// Verifies a Razorpay payment signature (HMAC-SHA256) and, only on success,
-// writes the order as 'Paid' using the service role key.
+// Verifies a Razorpay payment (HMAC-SHA256), confirms the amount Razorpay
+// captured equals the expected total recorded on the Pending order, and only
+// then marks that order 'Paid' using the service role key.
 //
-// The browser never sees the secret and never decides the status or the amount.
+// The browser never sees the secret, never chooses the amount, and never decides
+// the status.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -73,10 +75,6 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-function clean(value: unknown, max: number): string | null {
-  return typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : null;
-}
-
 Deno.serve(async (req) => {
   const headers = corsHeaders(req);
   if (req.method === 'OPTIONS') return new Response('ok', { headers });
@@ -107,8 +105,8 @@ Deno.serve(async (req) => {
       return json({ error: 'Payment verification failed' }, 400, headers);
     }
 
-    // Step 2: confirm with Razorpay that the payment really settled, and derive
-    // the authoritative amount from Razorpay rather than trusting the client.
+    // Step 2: ask Razorpay directly whether this payment settled, and confirm it
+    // belongs to the order we are about to mark paid.
     const payRes = await fetch(
       `https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`,
       { headers: { Authorization: `Basic ${btoa(`${keyId}:${secret}`)}` } },
@@ -130,50 +128,84 @@ Deno.serve(async (req) => {
       return json({ error: 'Payment amount invalid' }, 400, headers);
     }
 
-    // Step 3: persist the order with the service role key (bypasses RLS by design).
     const admin = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const buildOrderNumber = () => `YUSR-${Math.floor(100000 + Math.random() * 900000)}`;
-    const insertOrder = (orderNumber: string) =>
-      admin
-        .from('orders')
-        .insert({
-          order_number: orderNumber,
-          customer_name: clean(body?.customer_name, 120),
-          phone: clean(body?.phone, 20),
-          email: clean(body?.email, 200),
-          address: clean(body?.address, 500),
-          total_amount: Math.round(amountPaise / 100),
-          status: 'Paid',
-          // This function only ever handles prepaid payments, so the method is set
-          // here rather than trusted from the client.
-          payment_method: 'Prepaid',
-          razorpay_order_id: orderId,
-          razorpay_payment_id: paymentId,
-        })
-        .select('id, order_number')
-        .single();
+    // Step 3: the Pending order create-razorpay-order wrote for this Razorpay
+    // order. Its `total_amount` is what the customer was expected to pay.
+    const { data: pending, error: lookupError } = await admin
+      .from('orders')
+      .select('id, order_number, status, total_amount')
+      .eq('razorpay_order_id', orderId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    let { data: order, error: insertError } = await insertOrder(clean(body?.order_number, 20) ?? buildOrderNumber());
-
-    // A random 6-digit display number can theoretically collide with an existing
-    // one. When that is the conflict, retry with a fresh number so a real payment
-    // is never misreported as "already recorded".
-    if (insertError?.message.includes('order_number')) {
-      ({ data: order, error: insertError } = await insertOrder(buildOrderNumber()));
+    if (lookupError) {
+      console.error('verify-razorpay-payment: order lookup failed', lookupError.message);
+      return json({ error: 'Could not verify order' }, 500, headers);
+    }
+    if (!pending) {
+      console.error('verify-razorpay-payment: no order for razorpay order', orderId);
+      return json({ error: 'Order not found' }, 404, headers);
     }
 
-    if (insertError) {
-      if (insertError.code === '23505') {
-        return json({ error: 'This payment has already been recorded' }, 409, headers);
+    // Already processed (browser retry / double submit): report success instead
+    // of trying to write the same payment id twice.
+    if (pending.status === 'Paid') {
+      return json(
+        { success: true, order_id: pending.id, order_number: pending.order_number ?? null },
+        200,
+        headers,
+      );
+    }
+
+    // Step 4: the captured amount MUST equal the expected total. A mismatch means
+    // the order was tampered with, so it is never marked 'Paid'.
+    const expectedPaise = Math.round(Number(pending.total_amount) * 100);
+    if (!Number.isFinite(expectedPaise) || amountPaise !== expectedPaise) {
+      console.error('verify-razorpay-payment: amount mismatch', {
+        orderId,
+        paymentId,
+        amountPaise,
+        expectedPaise,
+      });
+      return json({ error: 'Payment amount does not match the order' }, 400, headers);
+    }
+
+    // Step 5: persist the payment on the order (service role bypasses RLS).
+    const { data: updated, error: updateError } = await admin
+      .from('orders')
+      .update({ status: 'Paid', razorpay_payment_id: paymentId })
+      .eq('id', pending.id)
+      .select('id, order_number');
+
+    if (updateError) {
+      // The unique index on razorpay_payment_id means this payment is already
+      // recorded; treat it as success rather than a 500.
+      if (updateError.code === '23505') {
+        return json(
+          { success: true, order_id: pending.id, order_number: pending.order_number ?? null },
+          200,
+          headers,
+        );
       }
-      console.error('verify-razorpay-payment: insert failed', insertError.message);
+      console.error('verify-razorpay-payment: update failed', updateError.message);
       return json({ error: 'Could not record order' }, 500, headers);
     }
 
-    return json({ success: true, order_id: order?.id, order_number: order?.order_number ?? null }, 200, headers);
+    // `.update()` reports success even when it matched zero rows; fail loudly.
+    if (!updated || updated.length === 0) {
+      console.error('verify-razorpay-payment: update matched no order', pending.id);
+      return json({ error: 'Order not found' }, 404, headers);
+    }
+
+    return json(
+      { success: true, order_id: updated[0].id, order_number: updated[0].order_number ?? null },
+      200,
+      headers,
+    );
   } catch (err) {
     console.error('verify-razorpay-payment: unexpected error', err);
     return json({ error: 'Unexpected error' }, 500, headers);

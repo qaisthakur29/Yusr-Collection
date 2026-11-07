@@ -234,7 +234,9 @@ export default function App() {
             onSelectProduct={handleSelectProduct}
           />
         );
-      case '/admin':
+      // Obfuscated on purpose: a guessable /admin invites probing. Change this
+      // value and the matching robots.txt disallow together.
+      case '/yusr-manage-9821':
         return <AdminPage />;
       case '/':
         return <HomePage onNavigate={navigateTo} onSelectProduct={handleSelectProduct} />;

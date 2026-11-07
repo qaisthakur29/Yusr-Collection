@@ -59,22 +59,11 @@ export function TrackOrderPage() {
     setLoading(false);
 
     if (error || data?.error || !data?.order) {
-      console.warn('[track-order] lookup failed', { query: raw, error, data });
       setNotFound(true);
       return;
     }
 
-    // If the order came back but has no usable courier link, surface exactly what
-    // the Edge Function returned so a missing/lost tracking_url is diagnosable.
-    const found = data.order as TrackedOrder;
-    if (!found.tracking_url || found.tracking_url.trim().length <= 5) {
-      console.warn('[track-order] no usable tracking_url in response', {
-        query: raw,
-        response: data,
-      });
-    }
-
-    setOrder(found);
+    setOrder(data.order as TrackedOrder);
   };
 
   const currentStep = order ? statusStep(order.status) : 0;

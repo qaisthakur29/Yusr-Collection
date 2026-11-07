@@ -17,7 +17,8 @@ const DEFAULT_OG_IMAGE = `${SITE_URL}/assets/aistudio/HERO_SECTION_BANNER_83e65a
 
 // Public path-based routes from App.tsx. '/' is deliberately omitted: the plugin
 // already picks it up from dist/index.html, and listing it again would write a
-// duplicate <url>. '/admin' is intentionally absent — it is not a public page.
+// duplicate <url>. The admin route is intentionally absent — it is not a public
+// page.
 const STATIC_ROUTES = [
   '/shop',
   '/about',
@@ -235,9 +236,10 @@ export default defineConfig(async ({mode}) => {
         hostname: SITE_URL,
         dynamicRoutes: [...STATIC_ROUTES, ...productRoutes],
         // Emits dist/robots.txt alongside the sitemap. Crawlers may index every
-        // public page, but /admin is kept out of the index and off the sitemap.
+        // public page, but the admin route is kept out of the index and off the
+        // sitemap. Must match the route in src/App.tsx and src/lib/seo.ts.
         generateRobotsTxt: true,
-        robots: [{userAgent: '*', allow: '/', disallow: '/admin'}],
+        robots: [{userAgent: '*', allow: '/', disallow: '/yusr-manage-9821'}],
       }),
       prerenderProductPages(products),
     ],
