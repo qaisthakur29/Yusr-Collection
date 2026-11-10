@@ -19,6 +19,7 @@ type AdminProduct = {
   details: string[];
   size_guide_url: string | null;
   sort_order: number;
+  is_active: boolean;
 };
 
 type AdminOrder = {
@@ -60,6 +61,7 @@ const emptyForm = {
   details: '',
   size_guide_url: '',
   sort_order: '0',
+  is_active: true,
 };
 
 function splitCsv(value: string): string[] {
@@ -128,6 +130,7 @@ export function AdminPage() {
   const [dispatchingId, setDispatchingId] = useState<string | null>(null);
   const [deliveringId, setDeliveringId] = useState<string | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
   const [trackingUrlInput, setTrackingUrlInput] = useState('');
@@ -260,6 +263,7 @@ export function AdminPage() {
       details: (product.details ?? []).join(', '),
       size_guide_url: product.size_guide_url ?? '',
       sort_order: String(product.sort_order ?? 0),
+      is_active: product.is_active ?? true,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -286,6 +290,7 @@ export function AdminPage() {
       details: splitCsv(form.details),
       size_guide_url: form.size_guide_url.trim() || null,
       sort_order: Math.trunc(Number(form.sort_order) || 0),
+      is_active: form.is_active,
     };
 
     const { data: saveResult, error: saveError } = await supabase.functions.invoke('manage-products', {
@@ -313,6 +318,25 @@ export function AdminPage() {
     });
     if (fnError || data?.error) return setError(await functionErrorMessage(fnError, data));
     setStatus('Product deleted');
+    await fetchProducts();
+  };
+
+  // Quick Hide/Show straight from the list: patches only is_active so the rest of
+  // the row is untouched, and no full edit form is needed.
+  const handleToggleActive = async (product: AdminProduct) => {
+    const nextActive = !product.is_active;
+    setTogglingId(product.id);
+    setError(null);
+    setStatus(null);
+
+    const { data, error: fnError } = await supabase.functions.invoke('manage-products', {
+      body: { action: 'update', id: product.id, product: { is_active: nextActive } },
+    });
+
+    setTogglingId(null);
+    if (fnError || data?.error) return setError(await functionErrorMessage(fnError, data));
+
+    setStatus(nextActive ? `${product.name} is now visible on the storefront` : `${product.name} is now hidden`);
     await fetchProducts();
   };
 
@@ -584,6 +608,18 @@ export function AdminPage() {
                   placeholder="1 = Top, 2 = Second…"
                 />
               </Field>
+
+              <Field label="Visible on Storefront">
+                <label className="flex items-center gap-2.5 min-h-[44px] px-3.5 border border-[#E5E5E5] text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.is_active}
+                    onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                    className="w-4 h-4 accent-[#C2A77A]"
+                  />
+                  <span>{form.is_active ? 'Active — visible to customers' : 'Hidden — draft only'}</span>
+                </label>
+              </Field>
               
               <Field label="Image (URL)" className="sm:col-span-2"><input required value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} className={inputClass} /></Field>
               <Field label="Gallery Image URLs (Comma Separated)" className="sm:col-span-2"><textarea rows={2} value={form.gallery} onChange={(e) => setForm({ ...form, gallery: e.target.value })} className={inputClass} /></Field>
@@ -606,7 +642,7 @@ export function AdminPage() {
             <div className="overflow-x-auto border border-[#E5E5E5] bg-white">
               <table className="w-full text-left text-sm">
                 <thead className="bg-[#FBFBFB] uppercase text-xs">
-                  <tr><th className="p-3">Name</th><th className="p-3">Category</th><th className="p-3">Price</th><th className="p-3">Sort Order</th><th className="p-3 text-right">Actions</th></tr>
+                  <tr><th className="p-3">Name</th><th className="p-3">Category</th><th className="p-3">Price</th><th className="p-3">Sort Order</th><th className="p-3">Status</th><th className="p-3 text-right">Actions</th></tr>
                 </thead>
                 <tbody>
                   {products.map((p) => (
@@ -615,6 +651,24 @@ export function AdminPage() {
                       <td className="p-3">{p.category}</td>
                       <td className="p-3">₹{p.price}</td>
                       <td className="p-3 tabular-nums">{p.sort_order}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                              p.is_active ? 'bg-green-100 text-green-800' : 'bg-[#EEEEEE] text-[#666666]'
+                            }`}
+                          >
+                            {p.is_active ? 'Active' : 'Hidden'}
+                          </span>
+                          <button
+                            onClick={() => void handleToggleActive(p)}
+                            disabled={togglingId === p.id}
+                            className="px-3 py-1 border text-xs uppercase hover:border-black disabled:opacity-40"
+                          >
+                            {togglingId === p.id ? 'Saving…' : p.is_active ? 'Hide' : 'Show'}
+                          </button>
+                        </div>
+                      </td>
                       <td className="p-3 text-right flex justify-end gap-2">
                         <button onClick={() => handleEdit(p)} className="px-3 py-1 border text-xs uppercase hover:border-black">Edit</button>
                         <button onClick={() => handleDelete(p.id)} className="px-3 py-1 border text-red-600 text-xs uppercase hover:bg-red-50">Delete</button>

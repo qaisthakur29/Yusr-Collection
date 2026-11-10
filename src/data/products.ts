@@ -100,7 +100,9 @@ export async function fetchProductsFromDB(options: FetchProductsOptions = {}): P
   const { limit, offset = 0, category, sort = 'featured' } = options;
   const order = SORT_ORDER[sort] ?? SORT_ORDER.featured;
 
-  let query = supabase.from('products').select(PRODUCT_COLUMNS);
+  // Hidden ("draft") products never reach the storefront. RLS enforces the same
+  // rule server-side; this filter keeps the intent explicit on the client too.
+  let query = supabase.from('products').select(PRODUCT_COLUMNS).eq('is_active', true);
 
   // PostgREST applies .order() clauses in the sequence they are chained.
   for (const clause of order) {

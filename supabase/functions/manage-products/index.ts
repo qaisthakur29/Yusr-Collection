@@ -28,6 +28,8 @@ const TEXT_FIELDS = [
 const NUMBER_FIELDS = ['price', 'mrp'] as const;
 const INTEGER_FIELDS = ['sort_order'] as const;
 const ARRAY_FIELDS = ['gallery', 'sizes', 'details'] as const;
+// Storefront visibility. false hides the product ("draft") without deleting it.
+const BOOLEAN_FIELDS = ['is_active'] as const;
 
 // Headers the Supabase JS SDK may send on an `functions.invoke` call. Kept in
 // sync with @supabase/supabase-js/cors — a missing entry makes the browser fail
@@ -143,6 +145,15 @@ function sanitizeProduct(input: unknown): Record<string, unknown> | null {
     const value = src[field];
     if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) return null;
     out[field] = value.map((item) => (item as string).trim()).filter(Boolean);
+  }
+
+  // Strict booleans only: a string like "false" would otherwise be coerced to
+  // truthy and silently publish a product the admin meant to hide.
+  for (const field of BOOLEAN_FIELDS) {
+    if (!(field in src)) continue;
+    const value = src[field];
+    if (typeof value !== 'boolean') return null;
+    out[field] = value;
   }
 
   return out;
