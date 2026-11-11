@@ -32,6 +32,7 @@
       n.callMethod.apply(n,arguments):n.queue.push(arguments)};
       if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
       n.queue=[];t=b.createElement(e);t.async=!0;
+      t.onload=function(){window.__fbEventsLoaded=!0};t.onerror=function(){window.__fbEventsError=!0};
       t.src=v;s=b.getElementsByTagName(e)[0];
       s.parentNode.insertBefore(t,s)}(window, document,'script',
       'https://connect.facebook.net/en_US/fbevents.js');
@@ -41,8 +42,13 @@
     <!-- End Meta Pixel Code -->
 
     <!-- Google Analytics 4 (gtag.js). The config call sends the initial
-         page_view for the landing URL. -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-NCPD0CW5G6"></script>
+         page_view for the landing URL.
+
+         The onload/onerror hooks let src/lib/ga4.ts tell a real gtag.js load
+         apart from the inline shim alone, so a blocked script is reported
+         instead of silently swallowing every event. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-NCPD0CW5G6"
+      onload="window.__gaLoaded=true" onerror="window.__gaError=true"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}

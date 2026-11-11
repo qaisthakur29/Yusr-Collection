@@ -5,33 +5,92 @@
 // before `fbevents.js` has finished downloading, so `fbq` already exists by the
 // time React mounts and early events are buffered rather than lost.
 //
-// `whenPixelReady` is a defensive layer on top of that: if the inline snippet was
-// stripped, moved, or blocked (ad-blocker / offline), `window.fbq` can be missing
-// when an event fires. Instead of dropping the event, we poll briefly and fire it
-// as soon as the pixel appears. If it never appears, the event is dropped
-// silently — there is nothing to send it through.
+// That queueing is also the trap this module guards against. `window.fbq` exists
+// as soon as the inline snippet runs, which is *before* `fbevents.js` has been
+// downloaded — so the mere presence of `fbq` proves nothing. When the script is
+// blocked (ad-blocker, CSP, offline) every event lands on `fbq.queue` and is
+// never transmitted, with no error anywhere. `whenPixelReady` therefore fires the
+// event as before and arms a 5-second watchdog: if `fbevents.js` still has not
+// loaded by then, it reports the failure via `console.error` instead of
+// swallowing it. The watchdog is also the only signal available when the inline
+// snippet itself was stripped and `fbq` never appeared at all.
 //
 // Nothing here depends on an npm package.
 
 declare global {
   interface Window {
     fbq?: (...args: unknown[]) => void;
+    /**
+     * Set by the pixel base code in index.html once `fbevents.js` has actually
+     * finished loading. This — not `window.fbq` — is what proves the pixel is
+     * live and the queued events are being sent.
+     */
+    __fbEventsLoaded?: boolean;
+    /** Set by the base code when `fbevents.js` fails to download. */
+    __fbEventsError?: boolean;
   }
 }
 
-// How long to keep looking for `window.fbq` before giving up. The inline snippet
-// in <head> runs before this module, so the first check almost always succeeds;
-// this only matters when the snippet was blocked, stripped, or deferred.
-const PIXEL_READY_TIMEOUT_MS = 8000;
+// How long to wait for the pixel to become genuinely live before reporting the
+// failure. Long enough to absorb a slow mobile download of `fbevents.js`, short
+// enough that a blocked pixel is flagged while the session is still open.
+const PIXEL_READY_TIMEOUT_MS = 5000;
 const PIXEL_READY_POLL_MS = 100;
 
 type Fbq = (...args: unknown[]) => void;
 
-// Runs `fire` with `fbq` as soon as the pixel is available.
+// True only once `fbevents.js` itself is running — not merely the inline shim.
+//
+// The `callMethod` fallback covers a stale cached index.html that still has the
+// original Meta snippet (without the __fbEventsLoaded hook): that is the
+// property fbevents.js defines when it takes over the queue, so it is the one
+// internals-based signal that does not rely on our own flag.
+function isPixelLive(): boolean {
+  if (window.__fbEventsLoaded === true) return true;
+  const fbq = window.fbq as { callMethod?: unknown } | undefined;
+  return typeof fbq?.callMethod === 'function';
+}
+
+let hasReportedPixelFailure = false;
+let pixelWatchArmed = false;
+
+/** Reports the failure once per session instead of on every dropped event. */
+function reportPixelFailure(reason: string): void {
+  if (hasReportedPixelFailure) return;
+  hasReportedPixelFailure = true;
+  console.error(
+    `[metaPixel] ${reason} Meta Pixel events are queued but never sent — ` +
+      'check for an ad-blocker, a CSP/firewall block on connect.facebook.net, or an offline connection.',
+  );
+}
+
+// Starts the load watchdog. Armed once: the failure is reported once, and later
+// events must not spawn duplicate timers.
+function watchPixelLoad(): void {
+  if (isPixelLive() || pixelWatchArmed) return;
+  pixelWatchArmed = true;
+
+  const deadline = Date.now() + PIXEL_READY_TIMEOUT_MS;
+  const check = () => {
+    if (isPixelLive()) return;
+    if (Date.now() >= deadline) {
+      reportPixelFailure(`fbevents.js did not load within ${PIXEL_READY_TIMEOUT_MS / 1000}s.`);
+      return;
+    }
+    window.setTimeout(check, PIXEL_READY_POLL_MS);
+  };
+  window.setTimeout(check, PIXEL_READY_POLL_MS);
+}
+
+// Runs `fire` with `fbq` as soon as the shim is available (which queues the event
+// for replay, exactly as before) and then verifies the pixel actually went live.
+// When the shim never appears at all, the same watchdog reports that instead of
+// letting the event vanish.
 function whenPixelReady(fire: (fbq: Fbq) => void): void {
   const ready = window.fbq;
   if (typeof ready === 'function') {
     fire(ready);
+    watchPixelLoad();
     return;
   }
 
@@ -40,9 +99,13 @@ function whenPixelReady(fire: (fbq: Fbq) => void): void {
     const fbq = window.fbq;
     if (typeof fbq === 'function') {
       fire(fbq);
+      watchPixelLoad();
       return;
     }
-    if (Date.now() >= deadline) return; // Pixel blocked: nothing to fire into.
+    if (Date.now() >= deadline) {
+      reportPixelFailure('window.fbq was never defined (the inline base code is missing or blocked).');
+      return;
+    }
     window.setTimeout(poll, PIXEL_READY_POLL_MS);
   };
   poll();

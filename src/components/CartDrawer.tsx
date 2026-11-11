@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Plus, Minus, Trash2, ArrowRight, ShieldCheck, Check, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabaseClient';
@@ -38,6 +38,52 @@ export function CartDrawer() {
     pincode: '',
     paymentMethod: 'prepaid', // 'prepaid' | 'cod'
   });
+
+  // Mobile browsers map "swipe back from the screen edge" (and Android's
+  // hardware/gesture back button) to a history pop. Claiming one history entry
+  // while the drawer is open turns that gesture into "close the cart" instead of
+  // leaving the site, which is what a slide-over should do.
+  //
+  // `closeCart` is a fresh function on every CartProvider render, so it is read
+  // through a ref: depending on it directly would re-run this effect on every
+  // cart mutation and push a new history entry each time.
+  const closeCartRef = useRef(closeCart);
+  closeCartRef.current = closeCart;
+  const cartEntryPushed = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Pushed without a URL, so the entry exists only to be popped: the address
+    // bar and the router's current path are left exactly as they were.
+    try {
+      window.history.pushState({ ...window.history.state, isCartOpen: true }, '');
+      cartEntryPushed.current = true;
+    } catch {
+      // History can be unavailable in strict privacy modes. The drawer still
+      // works; only the back gesture will fail to close it.
+    }
+
+    const handlePopState = () => {
+      // The entry has been consumed, so the cleanup below must not pop again.
+      cartEntryPushed.current = false;
+      closeCartRef.current();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+
+      // Closed from the UI rather than by the gesture, so our entry is still on
+      // the stack — drop it, otherwise the customer's next back press would be
+      // swallowed. Guarded on the state we set, so this can never undo a real
+      // navigation that happened while the drawer was open.
+      if (cartEntryPushed.current && window.history.state?.isCartOpen) {
+        cartEntryPushed.current = false;
+        window.history.back();
+      }
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -246,8 +292,16 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
     }
   };
 
+  // `touchAction: 'pan-y pinch-zoom'` on the overlay is deliberate. It keeps
+  // vertical scrolling and pinch-zoom working inside the drawer while making
+  // sure nothing here claims horizontal pans — which is the gesture mobile
+  // browsers reserve for "swipe back". Nothing else in this component listens
+  // for touch events, so the edge gesture reaches the browser untouched.
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 overflow-hidden"
+      style={{ touchAction: 'pan-y pinch-zoom' }}
+    >
       <div
         onClick={closeCart}
         className="fixed inset-0 bg-black/60 transition-opacity backdrop-blur-xs"
