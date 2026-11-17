@@ -132,7 +132,7 @@ export const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: 'Will the print fade after washing?',
-    a: 'No. We use premium DTG/DTF printing. Wash inside out in cold water, and do not iron directly on the print. It will last a long time.',
+    a: 'No. We use premium DTF printing. Wash inside out in cold water, and do not iron directly on the print. It will last a long time.',
   },
 ];
 
