@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import { Product, SIZE_CHART } from '../data/products';
 import { useCart } from '../context/CartContext';
-import { optimizeImage } from '../lib/image';
+import { optimizeImage, buildProductAlt } from '../lib/image';
 import { trackViewContent } from '../lib/metaPixel';
 import {
   ShieldCheck,
@@ -166,7 +166,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                   below-the-fold gallery images it must load eagerly. */}
               <img
                 src={optimizeImage(activeImage, 1000)}
-                alt={`${product.name} — Yusr Collection oversized tee`}
+                alt={buildProductAlt(product)}
                 loading="eager"
                 fetchPriority="high"
                 decoding="async"
@@ -195,7 +195,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                   >
                     <img
                       src={optimizeImage(img, 200)}
-                      alt={`${product.name} view ${idx + 1}`}
+                      alt={buildProductAlt(product, `view ${idx + 1}`)}
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover"
@@ -522,7 +522,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
               <div className="mt-4">
                 <img
                   src={optimizeImage(product.size_guide_url, 1000)}
-                  alt={`${product.name} size guide`}
+                  alt={buildProductAlt(product, 'size guide')}
                   loading="lazy"
                   decoding="async"
                   className="w-full h-auto object-contain bg-[#FBFBFB] border border-[#E5E5E5]"

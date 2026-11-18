@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Product } from '../data/products';
-import { optimizeImage } from '../lib/image';
+import { optimizeImage, buildProductAlt } from '../lib/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ProductCardImageProps {
@@ -60,11 +60,7 @@ export function ProductCardImage({ product, children }: ProductCardImageProps) {
           <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
             <img
               src={optimizeImage(img)}
-              alt={
-                idx === 0
-                  ? `${product.name} — Yusr Collection oversized tee`
-                  : `${product.name} — Yusr Collection oversized tee (view ${idx + 1})`
-              }
+              alt={buildProductAlt(product, idx === 0 ? undefined : `view ${idx + 1}`)}
               loading="lazy"
               decoding="async"
               referrerPolicy="no-referrer"

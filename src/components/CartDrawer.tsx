@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { X, Plus, Minus, Trash2, ArrowRight, ShieldCheck, Check, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabaseClient';
-import { optimizeImage } from '../lib/image';
+import { optimizeImage, buildProductAlt } from '../lib/image';
 import { trackInitiateCheckout, trackPurchase, type PixelLine } from '../lib/metaPixel';
 import { trackGa4BeginCheckout, trackGa4Purchase } from '../lib/ga4';
 
@@ -561,7 +561,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                   <div key={`${item.product.id}-${item.size}`} className="pt-4 first:pt-0 flex gap-4">
                     <img
                       src={optimizeImage(item.product.image, 200)}
-                      alt={item.product.name}
+                      alt={buildProductAlt(item.product)}
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"
