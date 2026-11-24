@@ -116,7 +116,7 @@ export const PUBLIC_ROUTES: { path: string; label: string }[] = [
 export const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: 'How long will it take to deliver my order?',
-    a: 'Since every piece is made-to-order and custom-printed just for you, it takes 3-5 days for printing and packing. After that, shipping takes 4-7 days. Total time: 7-10 working days.',
+    a: 'Since every piece is made-to-order and custom-printed just for you, please allow 3-5 business days for printing and packing. Shipping then takes 7-9 days across India. Total estimated delivery time: 10-14 days.',
   },
   {
     q: 'Do you offer Cash on Delivery (COD)?',

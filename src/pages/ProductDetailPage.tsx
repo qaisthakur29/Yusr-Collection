@@ -433,7 +433,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                       <strong>Custom Made-to-Order:</strong> Printing & packing takes 3-5 business days.
                     </p>
                     <p>
-                      <strong>Pan-India Shipping:</strong> Transit takes 4-7 days via premium couriers. Total timeline is 7-10 working days.
+                      <strong>Pan-India Shipping:</strong> Transit takes 7-9 days via premium couriers. Total delivery timeline is 10-14 days from your order date.
                     </p>
                     <p>
                       <strong>Payment Options:</strong> Prepaid (UPI/Cards) qualifies for ₹50 instant discount and priority dispatch. Cash on Delivery (COD) is available across India.

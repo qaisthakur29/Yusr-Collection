@@ -259,7 +259,7 @@ export function TrackOrderPage() {
                 4. Delivery
               </div>
               <p className="text-xs text-[#666666]">
-                You can click that link to see exactly where your package is. Transit takes 4-7 days.
+                You can click that link to see exactly where your package is. Total delivery time is 10-14 days from your order date.
               </p>
             </div>
           </div>
