@@ -299,7 +299,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
   // for touch events, so the edge gesture reaches the browser untouched.
   return (
     <div
-      className="fixed inset-0 z-50 overflow-hidden"
+      className="fixed inset-0 z-50"
       style={{ touchAction: 'pan-y pinch-zoom' }}
     >
       <div
@@ -308,19 +308,19 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
         aria-hidden="true"
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+      <div className="fixed inset-y-0 right-0 flex max-w-full">
         <div className="w-screen max-w-md bg-white text-[#1A1A1A] flex flex-col shadow-2xl">
           {/* Header */}
-          <div className="px-6 py-5 border-b border-[#E5E5E5] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-[#1A1A1A]" />
-              <h2 className="font-heading font-bold text-base tracking-[0.05em] uppercase text-[#1A1A1A]">
+          <div className="px-4 sm:px-6 py-5 border-b border-[#E5E5E5] flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <ShoppingBag className="w-5 h-5 text-[#1A1A1A] shrink-0" />
+              <h2 className="font-heading font-bold text-base tracking-[0.05em] uppercase text-[#1A1A1A] truncate">
                 YOUR CART ({items.reduce((s, i) => s + i.quantity, 0)})
               </h2>
             </div>
             <button
               onClick={closeCart}
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center -mr-2 text-[#666666] hover:text-[#1A1A1A] transition-colors"
+              className="min-h-[44px] min-w-[44px] shrink-0 flex items-center justify-center text-[#666666] hover:text-[#1A1A1A] transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -349,7 +349,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
             </div>
           ) : isCheckingOut ? (
             /* Checkout Form */
-            <form onSubmit={handleCheckoutSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+            <form onSubmit={handleCheckoutSubmit} className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E5]">
                 <h3 className="font-heading font-bold text-sm uppercase tracking-wide">Shipping & Contact</h3>
                 <button
@@ -556,7 +556,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
           ) : (
             /* Item list */
             <>
-              <div className="flex-1 overflow-y-auto divide-y divide-[#E5E5E5] p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto divide-y divide-[#E5E5E5] px-4 sm:px-6 py-6 space-y-4">
                 {items.map((item) => (
                   <div key={`${item.product.id}-${item.size}`} className="pt-4 first:pt-0 flex gap-4">
                     <img
@@ -621,19 +621,19 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
               </div>
 
               {/* Cart Summary (No Promo Code Box) */}
-              <div className="border-t border-[#E5E5E5] p-6 bg-[#FBFBFB] space-y-4">
+              <div className="border-t border-[#E5E5E5] px-4 sm:px-6 py-6 bg-[#FBFBFB] space-y-4">
                 <div className="space-y-1.5 text-xs text-[#666666] font-body">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span className="text-[#1A1A1A] font-medium tabular-nums">₹{subtotal}</span>
+                  <div className="flex w-full items-center justify-between gap-3">
+                    <span className="shrink-0">Subtotal</span>
+                    <span className="text-[#1A1A1A] font-medium tabular-nums whitespace-nowrap">₹{subtotal}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Shipping</span>
-                    <span className="text-[#1A1A1A] font-medium">Calculated at next step (FREE Pan-India)</span>
+                  <div className="flex w-full items-center justify-between gap-3">
+                    <span className="shrink-0">Shipping</span>
+                    <span className="text-[#1A1A1A] font-medium text-right">FREE Pan-India</span>
                   </div>
-                  <div className="flex justify-between pt-2 border-t border-[#E5E5E5] font-heading font-bold text-base text-[#1A1A1A]">
-                    <span>ESTIMATED TOTAL</span>
-                    <span className="tabular-nums">₹{subtotal}</span>
+                  <div className="flex w-full items-center justify-between gap-3 pt-2 border-t border-[#E5E5E5] font-heading font-bold text-base text-[#1A1A1A]">
+                    <span className="shrink-0">ESTIMATED TOTAL</span>
+                    <span className="tabular-nums whitespace-nowrap">₹{subtotal}</span>
                   </div>
                 </div>
 
