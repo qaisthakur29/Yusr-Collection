@@ -650,9 +650,9 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                     trackGa4BeginCheckout(pixelLines, subtotal);
                     setIsCheckingOut(true);
                   }}
-                  className="w-full min-h-[48px] py-3.5 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm uppercase tracking-[0.05em] transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  className="w-full min-h-[48px] py-3.5 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm tracking-[0.05em] transition-colors flex items-center justify-center gap-2 shadow-sm"
                 >
-                  <span>PROCEED TO CHECKOUT</span>
+                  <span>Secure Checkout</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>

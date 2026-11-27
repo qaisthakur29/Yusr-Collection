@@ -133,16 +133,6 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
       ? Array.from(new Set([product.image, ...galleryImages].filter(Boolean)))
       : [product.image];
 
-  // Delivery window shown as trust copy: custom printing takes 3-5 days, then
-  // 7-9 days transit, so the estimate spans 10 to 14 days from today.
-  const formatDeliveryDate = (date: Date) =>
-    date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-  const deliveryStart = new Date();
-  deliveryStart.setDate(deliveryStart.getDate() + 10);
-  const deliveryEnd = new Date();
-  deliveryEnd.setDate(deliveryEnd.getDate() + 14);
-  const deliveryEstimate = `${formatDeliveryDate(deliveryStart)} – ${formatDeliveryDate(deliveryEnd)}`;
-
   return (
     <div className="bg-white min-h-[100dvh] pt-6 sm:pt-12 pb-28 lg:pb-14">
       {/* Breadcrumb & Navigation */}
@@ -371,7 +361,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                 <CalendarDays className="w-4 h-4 text-[#C2A77A] shrink-0" />
                 <span>
                   Estimated delivery:{' '}
-                  <span className="text-[#1A1A1A] font-medium">{deliveryEstimate}</span>
+                  <span className="text-[#1A1A1A] font-medium">7 - 14 days</span>
                 </span>
               </div>
               <div className="flex items-center gap-2.5">
