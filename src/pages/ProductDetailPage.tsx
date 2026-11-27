@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import { Product, SIZE_CHART } from '../data/products';
 import { useCart } from '../context/CartContext';
@@ -14,6 +14,8 @@ import {
   Share2,
   Ruler,
   ShoppingBag,
+  CalendarDays,
+  Star,
 } from 'lucide-react';
 
 interface ProductDetailPageProps {
@@ -28,7 +30,7 @@ interface ProductDetailPageProps {
 // The `node` prop is react-markdown's internal AST node; it is stripped out so it
 // never lands on a real DOM element. Markdown is rendered without rehype-raw, so
 // raw HTML in the description is escaped rather than injected.
-const MD_HEADING = 'font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A] pt-3';
+const MD_HEADING = 'font-heading font-semibold text-xs tracking-wide text-[#1A1A1A] pt-3';
 const MD_LINK = 'underline decoration-[#C2A77A] underline-offset-2 hover:text-[#C2A77A]';
 
 const MARKDOWN_COMPONENTS: Components = {
@@ -65,6 +67,10 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  // The mobile sticky bar only appears once the in-page "Add to cart" block has
+  // scrolled out of view, so it never duplicates or overlaps the real button.
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const primaryActionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setActiveImage(product.image);
@@ -74,6 +80,22 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
   useEffect(() => {
     trackViewContent(product);
   }, [product.id, product.name, product.price]);
+
+  // Toggle the sticky mobile bar based on whether the primary action block is
+  // on screen. Degrades gracefully (bar stays visible) where the API is absent.
+  useEffect(() => {
+    const el = primaryActionRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setShowStickyBar(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { rootMargin: '0px 0px -72px 0px', threshold: 0 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [product.id]);
 
   const toggleAccordion = (id: string) => {
     setOpenAccordion(openAccordion === id ? null : id);
@@ -111,12 +133,22 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
       ? Array.from(new Set([product.image, ...galleryImages].filter(Boolean)))
       : [product.image];
 
+  // Delivery window shown as trust copy: custom printing takes 3-5 days, then
+  // 7-9 days transit, so the estimate spans 10 to 14 days from today.
+  const formatDeliveryDate = (date: Date) =>
+    date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  const deliveryStart = new Date();
+  deliveryStart.setDate(deliveryStart.getDate() + 10);
+  const deliveryEnd = new Date();
+  deliveryEnd.setDate(deliveryEnd.getDate() + 14);
+  const deliveryEstimate = `${formatDeliveryDate(deliveryStart)} – ${formatDeliveryDate(deliveryEnd)}`;
+
   return (
-    <div className="bg-white min-h-[100dvh] py-6 sm:py-12">
+    <div className="bg-white min-h-[100dvh] pt-6 sm:pt-12 pb-28 lg:pb-14">
       {/* Breadcrumb & Navigation */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
         <div className="flex items-center justify-between text-xs text-[#666666]">
-          <div className="flex items-center gap-2 font-heading uppercase tracking-wider">
+          <div className="flex items-center gap-2 font-heading tracking-normal">
             {/* Real anchors so the breadcrumb trail is crawlable. */}
             <a
               href="/"
@@ -209,76 +241,88 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
             {/* Quality Seals */}
             <div className="grid grid-cols-3 gap-3 p-4 bg-[#FBFBFB] border border-[#E5E5E5] text-center text-xs">
               <div>
-                <span className="block font-heading font-bold text-[#1A1A1A] uppercase">240 GSM</span>
-                <span className="text-[11px] text-[#666666]">Heavy Cotton</span>
+                <span className="block font-heading font-semibold text-[#1A1A1A]">240 GSM</span>
+                <span className="text-[11px] text-[#666666]">Heavy cotton</span>
               </div>
               <div className="border-x border-[#E5E5E5]">
-                <span className="block font-heading font-bold text-[#1A1A1A] uppercase">Pre-Shrunk</span>
-                <span className="text-[11px] text-[#666666]">Zero Distortion</span>
+                <span className="block font-heading font-semibold text-[#1A1A1A]">Pre-shrunk</span>
+                <span className="text-[11px] text-[#666666]">Zero distortion</span>
               </div>
               <div>
-                <span className="block font-heading font-bold text-[#1A1A1A] uppercase">DTF Print</span>
-                <span className="text-[11px] text-[#666666]">Fade Resistant</span>
+                <span className="block font-heading font-semibold text-[#1A1A1A]">DTF print</span>
+                <span className="text-[11px] text-[#666666]">Fade resistant</span>
               </div>
             </div>
           </div>
 
           {/* Right Column: Contiguous Purchase Module */}
-          <div className="flex flex-col space-y-6">
-            
+          <div className="flex flex-col">
+
             {/* Title & Tagline */}
             <div>
-              <span className="text-xs font-heading font-bold text-[#C2A77A] tracking-[0.15em] uppercase block mb-1">
-                {product.tag || 'YUSR ORIGINAL DROP'}
+              <span className="text-[11px] font-heading font-semibold text-[#C2A77A] tracking-[0.12em] block mb-2">
+                {product.tag || 'Yusr Original Drop'}
               </span>
-              <h1 className="font-heading font-extrabold text-2xl sm:text-3xl lg:text-4xl uppercase tracking-[0.02em] text-[#1A1A1A] leading-tight">
+              <h1 className="font-heading font-medium text-xl sm:text-2xl tracking-[-0.01em] text-[#1A1A1A] leading-snug">
                 {product.name}
               </h1>
               {product.subname && (
-                <p className="font-heading font-semibold text-xs sm:text-sm text-[#666666] uppercase tracking-wide mt-1">
-                  "{product.subname}"
+                <p className="font-body text-sm text-[#666666] mt-1.5">
+                  {product.subname}
                 </p>
               )}
+
+              {/* Review & quality trust line */}
+              <div className="flex items-center gap-2 mt-3">
+                <span className="flex items-center gap-0.5" aria-label="Rated 5 out of 5">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <Star key={i} className="w-3.5 h-3.5 text-[#C2A77A]" fill="#C2A77A" strokeWidth={0} />
+                  ))}
+                </span>
+                <span className="text-[11px] font-body text-[#666666]">
+                  Premium 240 GSM quality · Be the first to review
+                </span>
+              </div>
             </div>
 
             {/* Price Block */}
-            <div className="flex items-baseline gap-3 pb-4 border-b border-[#E5E5E5]">
-              <span className="font-heading font-bold text-2xl sm:text-3xl text-[#1A1A1A] tabular-nums">
+            <div className="flex items-baseline gap-3 mt-6 pb-6 border-b border-[#E5E5E5]">
+              <span className="font-heading font-semibold text-xl sm:text-2xl text-[#1A1A1A] tabular-nums">
                 ₹{product.price}
               </span>
-              <span className="font-body text-base text-[#666666] line-through tabular-nums">
+              <span className="font-body text-sm text-[#999999] line-through tabular-nums">
                 ₹{product.mrp}
               </span>
-              <span className="bg-[#F7F4EE] text-[#1A1A1A] border border-[#C2A77A] px-2 py-0.5 text-xs font-heading font-bold uppercase">
-                Save ₹{product.mrp - product.price} (33% OFF)
+              <span className="text-[#C2A77A] text-[11px] font-heading font-semibold">
+                Save ₹{product.mrp - product.price}
               </span>
             </div>
 
             {/* Size Selector */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]">
-                  Select Size (Drop-Shoulder Fit)
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-heading font-semibold text-xs tracking-wide text-[#1A1A1A]">
+                  Select size <span className="text-[#999999] font-normal">(Drop-shoulder fit)</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => setShowSizeModal(true)}
-                  className="flex items-center gap-1 text-xs font-heading font-semibold text-[#666666] hover:text-[#1A1A1A] underline tracking-wider uppercase min-h-[44px]"
+                  className="flex items-center gap-1 text-xs font-body text-[#666666] hover:text-[#1A1A1A] min-h-[44px]"
                 >
                   <Ruler className="w-3.5 h-3.5 text-[#C2A77A]" />
-                  <span>Size Guide</span>
+                  <span className="underline underline-offset-2">Size guide</span>
                 </button>
               </div>
 
-              <div className="grid grid-cols-5 gap-2.5">
+              <div className="grid grid-cols-5 gap-2">
                 {product.sizes.map((size) => (
                   <button
                     key={size}
                     type="button"
                     onClick={() => setSelectedSize(size)}
-                    className={`min-h-[48px] flex items-center justify-center font-heading font-bold text-sm tracking-wide transition-all border ${
+                    className={`min-h-[48px] flex items-center justify-center font-heading font-medium text-sm tracking-wide transition-all border ${
                       selectedSize === size
-                        ? 'bg-[#1A1A1A] text-white border-[#1A1A1A] shadow-xs'
+                        ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
                         : 'bg-white text-[#1A1A1A] border-[#E5E5E5] hover:border-[#1A1A1A]'
                     }`}
                   >
@@ -286,27 +330,43 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-[#666666] mt-2 font-body">
-                💡 Oversized streetwear cut. If you want a standard fitted look, order one size down.
+              <p className="text-[11px] text-[#666666] mt-2.5 font-body">
+                Oversized streetwear cut. For a standard fitted look, order one size down.
               </p>
             </div>
 
-            {/* Action Buttons (Strict min 44px Android touch targets) */}
-            <div className="space-y-3 pt-2">
+            {/* Bundle Offers */}
+            <div className="mt-6 border border-[#E5E5E5] divide-y divide-[#E5E5E5]">
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="font-body text-xs text-[#1A1A1A]">
+                  Buy 2 <span className="text-[#666666]">for</span> ₹1999
+                </span>
+                <span className="font-heading font-semibold text-[11px] text-[#C2A77A]">Save ₹399</span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="font-body text-xs text-[#1A1A1A]">
+                  Buy 3 <span className="text-[#666666]">for</span> ₹2699
+                </span>
+                <span className="font-heading font-semibold text-[11px] text-[#C2A77A]">Save ₹898</span>
+              </div>
+            </div>
+
+            {/* Action Buttons (Primary dark CTA + quiet WhatsApp support link) */}
+            <div ref={primaryActionRef} className="mt-6 space-y-3">
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="w-full min-h-[50px] py-4 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm uppercase tracking-[0.05em] transition-all flex items-center justify-center gap-2 shadow-sm"
+                className="w-full min-h-[52px] py-4 bg-[#1A1A1A] hover:bg-[#333333] text-white font-heading font-medium text-sm tracking-wide transition-colors flex items-center justify-center gap-2"
               >
                 {justAdded ? (
                   <>
-                    <Check className="w-5 h-5 text-[#111111]" />
-                    <span>ADDED TO CART!</span>
+                    <Check className="w-5 h-5" />
+                    <span>Added to cart</span>
                   </>
                 ) : (
                   <>
-                    <ShoppingBag className="w-5 h-5 text-[#111111]" />
-                    <span>ADD TO CART · ₹{product.price}</span>
+                    <ShoppingBag className="w-4 h-4" />
+                    <span>Add to cart</span>
                   </>
                 )}
               </button>
@@ -314,26 +374,33 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
               <button
                 type="button"
                 onClick={handleWhatsAppOrder}
-                className="w-full min-h-[48px] py-3.5 bg-transparent border-2 border-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white text-[#1A1A1A] font-heading font-bold text-xs sm:text-sm uppercase tracking-[0.05em] transition-all flex items-center justify-center gap-2"
+                className="w-full min-h-[44px] py-3 bg-transparent border border-[#E5E5E5] hover:border-[#1A1A1A] text-[#666666] hover:text-[#1A1A1A] font-body text-xs transition-colors flex items-center justify-center gap-2"
               >
                 <MessageCircle className="w-4 h-4 text-[#25D366]" />
-                <span>DIRECT ORDER VIA WHATSAPP</span>
+                <span>Have a question? Chat with us</span>
               </button>
             </div>
 
-            {/* Quick Delivery Guarantee */}
-            <div className="p-3.5 bg-[#F9F9F9] border border-[#E5E5E5] space-y-2 text-xs font-body">
-              <div className="flex items-center gap-2.5 text-[#1A1A1A]">
+            {/* Delivery estimate & trust */}
+            <div className="mt-6 border-t border-[#E5E5E5] pt-6 space-y-3 text-xs font-body text-[#666666]">
+              <div className="flex items-center gap-2.5">
+                <CalendarDays className="w-4 h-4 text-[#C2A77A] shrink-0" />
+                <span>
+                  Estimated delivery:{' '}
+                  <span className="text-[#1A1A1A] font-medium">{deliveryEstimate}</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5">
                 <Truck className="w-4 h-4 text-[#C2A77A] shrink-0" />
-                <span>Free Shipping Pan-India on Prepaid | COD Available</span>
+                <span>Free shipping Pan-India on prepaid · COD available</span>
               </div>
-              <div className="flex items-center gap-2.5 text-[#1A1A1A]">
+              <div className="flex items-center gap-2.5">
                 <RotateCcw className="w-4 h-4 text-[#C2A77A] shrink-0" />
-                <span>48-Hour Size Exchange (Unboxing Video Required)</span>
+                <span>48-hour size exchange (unboxing video required)</span>
               </div>
-              <div className="flex items-center gap-2.5 text-[#1A1A1A]">
+              <div className="flex items-center gap-2.5">
                 <ShieldCheck className="w-4 h-4 text-[#C2A77A] shrink-0" />
-                <span>Made-to-Order Custom Print (Dispatches in 3-5 days)</span>
+                <span>Made-to-order print · dispatches in 3–5 days</span>
               </div>
             </div>
 
@@ -345,9 +412,9 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                 <button
                   type="button"
                   onClick={() => toggleAccordion('desc')}
-                  className="w-full py-4 flex items-center justify-between text-left font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]"
+                  className="w-full py-4 flex items-center justify-between text-left font-heading font-semibold text-xs tracking-wide text-[#1A1A1A]"
                 >
-                  <span>PRODUCT SPECIFICATIONS & FABRIC</span>
+                  <span>Product specifications & fabric</span>
                   <ChevronDown
                     className={`w-4 h-4 transition-transform duration-200 ${
                       openAccordion === 'desc' ? 'rotate-180' : ''
@@ -376,9 +443,9 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                 <button
                   type="button"
                   onClick={() => toggleAccordion('size')}
-                  className="w-full py-4 flex items-center justify-between text-left font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]"
+                  className="w-full py-4 flex items-center justify-between text-left font-heading font-semibold text-xs tracking-wide text-[#1A1A1A]"
                 >
-                  <span>SIZE CHART & MEASUREMENTS</span>
+                  <span>Size chart & measurements</span>
                   <ChevronDown
                     className={`w-4 h-4 transition-transform duration-200 ${
                       openAccordion === 'size' ? 'rotate-180' : ''
@@ -388,7 +455,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                 {openAccordion === 'size' && (
                   <div className="pb-4 overflow-x-auto">
                     <table className="w-full text-xs text-left border border-[#E5E5E5]">
-                      <thead className="bg-[#F8F8F8] font-heading font-bold uppercase text-[#1A1A1A] border-b border-[#E5E5E5]">
+                      <thead className="bg-[#F8F8F8] font-heading font-semibold text-[#1A1A1A] border-b border-[#E5E5E5]">
                         <tr>
                           <th className="p-2">Size</th>
                           <th className="p-2">Chest (Inches)</th>
@@ -418,9 +485,9 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                 <button
                   type="button"
                   onClick={() => toggleAccordion('shipping')}
-                  className="w-full py-4 flex items-center justify-between text-left font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]"
+                  className="w-full py-4 flex items-center justify-between text-left font-heading font-semibold text-xs tracking-wide text-[#1A1A1A]"
                 >
-                  <span>SHIPPING & DELIVERY TIMELINES</span>
+                  <span>Shipping & delivery timelines</span>
                   <ChevronDown
                     className={`w-4 h-4 transition-transform duration-200 ${
                       openAccordion === 'shipping' ? 'rotate-180' : ''
@@ -447,9 +514,9 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                 <button
                   type="button"
                   onClick={() => toggleAccordion('return')}
-                  className="w-full py-4 flex items-center justify-between text-left font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]"
+                  className="w-full py-4 flex items-center justify-between text-left font-heading font-semibold text-xs tracking-wide text-[#1A1A1A]"
                 >
-                  <span>RETURN & EXCHANGE POLICY (48H RULE)</span>
+                  <span>Return & exchange policy (48h rule)</span>
                   <ChevronDown
                     className={`w-4 h-4 transition-transform duration-200 ${
                       openAccordion === 'return' ? 'rotate-180' : ''
@@ -472,7 +539,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                     </p>
                     <button
                       onClick={() => onNavigate('/returns')}
-                      className="text-xs font-heading font-bold text-[#1A1A1A] underline uppercase pt-1 inline-block"
+                      className="text-xs font-heading font-semibold text-[#1A1A1A] underline pt-1 inline-block"
                     >
                       Read Complete Returns Policy →
                     </button>
@@ -484,20 +551,33 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
         </div>
       </div>
 
-      {/* Sticky Bottom Buy Bar on Mobile (Android-Optimized) */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-[#E5E5E5] px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-3">
-        <div className="flex flex-col">
-          <span className="text-[10px] text-[#666666] uppercase font-heading">Total Price</span>
-          <span className="font-heading font-bold text-base text-[#1A1A1A] tabular-nums">
-            ₹{product.price}
-          </span>
-        </div>
+      {/* Sticky Bottom Buy Bar on Mobile — sleek, no price block. It slides in
+          only once the in-page "Add to cart" block has scrolled out of view, so
+          it never duplicates or overlaps the real CTA. */}
+      <div
+        className={`lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-[#E5E5E5] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 transition-transform duration-300 ${
+          showStickyBar ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <span className="shrink-0 text-xs font-body text-[#666666]">
+          Size: <span className="text-[#1A1A1A] font-medium">{selectedSize}</span>
+        </span>
         <button
+          type="button"
           onClick={handleAddToCart}
-          className="flex-1 min-h-[46px] py-3 bg-[#C2A77A] text-[#111111] font-heading font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm"
+          className="flex-1 min-h-[46px] py-3 bg-[#1A1A1A] hover:bg-[#333333] text-white font-heading font-medium text-sm tracking-wide flex items-center justify-center gap-2 transition-colors"
         >
-          <ShoppingBag className="w-4 h-4" />
-          <span>Add to Cart ({selectedSize})</span>
+          {justAdded ? (
+            <>
+              <Check className="w-4 h-4" />
+              <span>Added to cart</span>
+            </>
+          ) : (
+            <>
+              <ShoppingBag className="w-4 h-4" />
+              <span>Add to cart</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -507,7 +587,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
           {/* Added max-h and overflow-y-auto so long images scroll inside the modal */}
           <div className="bg-white max-w-lg w-full p-6 text-[#1A1A1A] shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center pb-4 border-b border-[#E5E5E5]">
-              <h3 className="font-heading font-bold text-base uppercase tracking-wider">
+              <h3 className="font-heading font-semibold text-base">
                 Size Guide
               </h3>
               <button
@@ -536,7 +616,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                 </p>
                 <div className="overflow-x-auto border border-[#E5E5E5]">
                   <table className="w-full text-xs text-left">
-                    <thead className="bg-[#F8F8F8] font-heading font-bold uppercase text-[#1A1A1A] border-b border-[#E5E5E5]">
+                    <thead className="bg-[#F8F8F8] font-heading font-semibold text-[#1A1A1A] border-b border-[#E5E5E5]">
                       <tr>
                         <th className="p-2.5">Size</th>
                         <th className="p-2.5">Chest</th>
@@ -564,7 +644,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
             <div className="mt-4 pt-3 border-t border-[#E5E5E5] flex justify-end">
               <button
                 onClick={() => setShowSizeModal(false)}
-                className="min-h-[40px] px-6 bg-[#1A1A1A] text-white font-heading font-bold text-xs uppercase"
+                className="min-h-[40px] px-6 bg-[#1A1A1A] text-white font-heading font-medium text-xs"
               >
                 Close Guide
               </button>
