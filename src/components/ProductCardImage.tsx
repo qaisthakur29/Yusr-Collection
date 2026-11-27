@@ -46,7 +46,7 @@ export function ProductCardImage({ product, children }: ProductCardImageProps) {
 
   return (
     <div
-      className="relative w-full aspect-[4/5] overflow-hidden bg-[#F8F8F8] group"
+      className="relative w-full aspect-[4/5] overflow-hidden rounded-lg bg-[#F8F8F8] group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

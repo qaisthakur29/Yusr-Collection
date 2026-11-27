@@ -100,7 +100,7 @@ export function ShopPage({ onSelectProduct }: ShopPageProps) {
         </div>
 
         {/* Filters and Sorting Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-8 bg-[#FBFBFB] p-3 border border-[#E5E5E5]">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-8 bg-[#FBFBFB] p-3 border border-[#E5E5E5] rounded-lg">
           
           {/* Category Tabs */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
@@ -108,7 +108,7 @@ export function ShopPage({ onSelectProduct }: ShopPageProps) {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`min-h-[40px] px-4 py-2 text-xs font-heading font-semibold uppercase tracking-wider transition-colors whitespace-nowrap ${
+                className={`min-h-[40px] px-4 py-2 text-xs font-heading font-semibold uppercase tracking-wider rounded-md transition-colors whitespace-nowrap ${
                   selectedCategory === cat
                     ? 'bg-[#1A1A1A] text-white shadow-xs'
                     : 'bg-white text-[#666666] border border-[#E5E5E5] hover:text-[#1A1A1A]'
@@ -125,7 +125,7 @@ export function ShopPage({ onSelectProduct }: ShopPageProps) {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as ProductSort)}
-              className="min-h-[40px] px-3 py-1.5 border border-[#E5E5E5] bg-white text-xs font-heading font-semibold uppercase text-[#1A1A1A] focus:outline-none focus:border-[#C2A77A]"
+              className="min-h-[40px] px-3 py-1.5 border border-[#E5E5E5] bg-white text-xs font-heading font-semibold uppercase rounded-md text-[#1A1A1A] focus:outline-none focus:border-[#C2A77A]"
             >
               <option value="featured">Featured Drop</option>
               <option value="price-asc">Price: Low to High</option>
@@ -139,11 +139,11 @@ export function ShopPage({ onSelectProduct }: ShopPageProps) {
           {loading
             ? Array.from({ length: PAGE_SIZE }).map((_, i) => (
                 <div key={`skeleton-${i}`} className="flex flex-col" aria-hidden="true">
-                  <div className="w-full aspect-[4/5] bg-[#F0F0F0] animate-pulse" />
+                  <div className="w-full aspect-[4/5] bg-[#F0F0F0] rounded-lg animate-pulse" />
                   <div className="pt-3 space-y-2">
-                    <div className="h-3 w-1/3 bg-[#F0F0F0] animate-pulse" />
-                    <div className="h-4 w-3/4 bg-[#F0F0F0] animate-pulse" />
-                    <div className="h-5 w-1/2 bg-[#F0F0F0] animate-pulse" />
+                    <div className="h-3 w-1/3 bg-[#F0F0F0] rounded-sm animate-pulse" />
+                    <div className="h-4 w-3/4 bg-[#F0F0F0] rounded-sm animate-pulse" />
+                    <div className="h-5 w-1/2 bg-[#F0F0F0] rounded-sm animate-pulse" />
                   </div>
                 </div>
               ))
@@ -164,7 +164,7 @@ export function ShopPage({ onSelectProduct }: ShopPageProps) {
                   <div className="absolute inset-x-2 bottom-2 hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button
                       onClick={(e) => handleQuickAdd(product, e)}
-                      className="w-full min-h-[40px] py-2 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-xs uppercase tracking-wide transition-colors shadow-sm"
+                      className="w-full min-h-[40px] py-2 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-xs uppercase tracking-wide rounded-md transition-colors shadow-sm"
                     >
                       Quick Add ({currentSize})
                     </button>
@@ -205,7 +205,7 @@ export function ShopPage({ onSelectProduct }: ShopPageProps) {
                         onClick={() =>
                           setSelectedSizes((prev) => ({ ...prev, [product.id]: s }))
                         }
-                        className={`min-w-[28px] h-7 px-1.5 text-[11px] font-heading font-semibold transition-colors border ${
+                        className={`min-w-[28px] h-7 px-1.5 text-[11px] font-heading font-semibold rounded-md transition-colors border ${
                           currentSize === s
                             ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
                             : 'bg-white text-[#666666] border-[#E5E5E5] hover:border-[#1A1A1A]'
@@ -234,7 +234,7 @@ export function ShopPage({ onSelectProduct }: ShopPageProps) {
                   {/* Mobile Add to Cart Button */}
                   <button
                     onClick={(e) => handleQuickAdd(product, e)}
-                    className="md:hidden mt-3 w-full min-h-[44px] py-2.5 bg-[#C2A77A] text-[#111111] font-heading font-bold text-xs uppercase tracking-wide"
+                    className="md:hidden mt-3 w-full min-h-[44px] py-2.5 bg-[#C2A77A] text-[#111111] font-heading font-bold text-xs uppercase tracking-wide rounded-md"
                   >
                     Add to Cart ({currentSize})
                   </button>
@@ -258,7 +258,7 @@ export function ShopPage({ onSelectProduct }: ShopPageProps) {
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
               aria-label="Previous page"
-              className="min-h-[40px] min-w-[40px] flex items-center justify-center border border-[#E5E5E5] bg-white text-[#1A1A1A] disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#1A1A1A] transition-colors"
+              className="min-h-[40px] min-w-[40px] flex items-center justify-center border border-[#E5E5E5] bg-white text-[#1A1A1A] rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#1A1A1A] transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -268,7 +268,7 @@ export function ShopPage({ onSelectProduct }: ShopPageProps) {
                 key={i}
                 onClick={() => setPage(i)}
                 aria-current={page === i ? 'page' : undefined}
-                className={`min-h-[40px] min-w-[40px] px-3 text-xs font-heading font-semibold tabular-nums transition-colors ${
+                className={`min-h-[40px] min-w-[40px] px-3 text-xs font-heading font-semibold rounded-md tabular-nums transition-colors ${
                   page === i
                     ? 'bg-[#1A1A1A] text-white'
                     : 'bg-white text-[#666666] border border-[#E5E5E5] hover:text-[#1A1A1A]'
@@ -282,7 +282,7 @@ export function ShopPage({ onSelectProduct }: ShopPageProps) {
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
               aria-label="Next page"
-              className="min-h-[40px] min-w-[40px] flex items-center justify-center border border-[#E5E5E5] bg-white text-[#1A1A1A] disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#1A1A1A] transition-colors"
+              className="min-h-[40px] min-w-[40px] flex items-center justify-center border border-[#E5E5E5] bg-white text-[#1A1A1A] rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:border-[#1A1A1A] transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

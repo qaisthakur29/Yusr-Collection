@@ -116,7 +116,7 @@ export function Navbar({ currentPath, onNavigate }: NavbarProps) {
           />
 
           <div className="fixed inset-y-0 left-0 max-w-full flex">
-            <div className="w-[85vw] max-w-xs bg-white text-[#1A1A1A] shadow-2xl flex flex-col justify-between">
+            <div className="w-[85vw] max-w-xs bg-white text-[#1A1A1A] shadow-2xl rounded-r-lg overflow-hidden flex flex-col justify-between">
               <div>
                 {/* Mobile Drawer Header */}
                 <div className="px-6 py-5 border-b border-[#E5E5E5] flex items-center justify-between">
@@ -144,7 +144,7 @@ export function Navbar({ currentPath, onNavigate }: NavbarProps) {
                       <button
                         key={link.path}
                         onClick={() => handleNavClick(link.path)}
-                        className={`w-full min-h-[48px] px-4 flex items-center justify-between font-heading font-medium text-sm tracking-[0.1em] uppercase text-left transition-colors ${
+                        className={`w-full min-h-[48px] px-4 flex items-center justify-between font-heading font-medium text-sm tracking-[0.1em] uppercase text-left rounded-md transition-colors ${
                           isActive
                             ? 'bg-[#F7F4EE] text-[#1A1A1A] font-bold border-l-2 border-[#C2A77A]'
                             : 'text-[#1A1A1A] hover:bg-neutral-50'
@@ -164,7 +164,7 @@ export function Navbar({ currentPath, onNavigate }: NavbarProps) {
                   href="https://wa.me/919326184407"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full min-h-[44px] py-3 bg-[#25D366] text-white flex items-center justify-center gap-2 font-heading font-bold text-xs uppercase tracking-wide"
+                  className="w-full min-h-[44px] py-3 bg-[#25D366] text-white flex items-center justify-center gap-2 font-heading font-bold text-xs uppercase tracking-wide rounded-md"
                 >
                   WhatsApp Support (+91 9326184407)
                 </a>

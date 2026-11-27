@@ -90,6 +90,7 @@ export function CartDrawer() {
   const isPrepaid = formData.paymentMethod === 'prepaid';
   const prepaidDiscount = isPrepaid ? 50 : 0;
   const orderTotal = Math.max(0, subtotal - prepaidDiscount);
+  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const pixelLines: PixelLine[] = items.map((item) => ({
     id: item.product.id,
@@ -316,7 +317,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
       />
 
       <div className="fixed inset-y-0 right-0 flex max-w-full">
-        <div className="w-screen max-w-md bg-white text-[#1A1A1A] flex flex-col shadow-2xl">
+        <div className="w-screen max-w-md bg-white text-[#1A1A1A] flex flex-col shadow-2xl overflow-hidden sm:rounded-l-lg">
           {/* Header */}
           <div className="px-4 sm:px-6 py-5 border-b border-[#E5E5E5] flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
@@ -349,7 +350,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                   setIsCheckingOut(false);
                   closeCart();
                 }}
-                className="w-full min-h-[44px] py-3 bg-[#C2A77A] text-[#111111] font-heading font-bold text-sm uppercase tracking-wide"
+                className="w-full min-h-[44px] py-3 bg-[#C2A77A] text-[#111111] font-heading font-bold text-sm uppercase tracking-wide rounded-md"
               >
                 Continue Shopping
               </button>
@@ -376,7 +377,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                   placeholder="e.g. Zaid Khan"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full min-h-[44px] px-3.5 py-2 border border-[#E5E5E5] text-sm focus:outline-none focus:border-[#C2A77A]"
+                  className="w-full min-h-[44px] px-3.5 py-2 border border-[#E5E5E5] text-sm rounded-md focus:outline-none focus:border-[#C2A77A]"
                 />
               </div>
 
@@ -389,7 +390,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                     placeholder="+91 98765 43210"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full min-h-[44px] px-3.5 py-2 border border-[#E5E5E5] text-sm focus:outline-none focus:border-[#C2A77A]"
+                    className="w-full min-h-[44px] px-3.5 py-2 border border-[#E5E5E5] text-sm rounded-md focus:outline-none focus:border-[#C2A77A]"
                   />
                 </div>
                 <div>
@@ -399,7 +400,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                     placeholder="name@email.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full min-h-[44px] px-3.5 py-2 border border-[#E5E5E5] text-sm focus:outline-none focus:border-[#C2A77A]"
+                    className="w-full min-h-[44px] px-3.5 py-2 border border-[#E5E5E5] text-sm rounded-md focus:outline-none focus:border-[#C2A77A]"
                   />
                 </div>
               </div>
@@ -412,7 +413,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                   placeholder="House/Flat No., Building, Street Name"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-[#E5E5E5] text-sm focus:outline-none focus:border-[#C2A77A]"
+                  className="w-full px-3.5 py-2 border border-[#E5E5E5] text-sm rounded-md focus:outline-none focus:border-[#C2A77A]"
                 />
               </div>
 
@@ -425,7 +426,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                     placeholder="Mumbai"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full min-h-[44px] px-3 py-2 border border-[#E5E5E5] text-sm focus:outline-none focus:border-[#C2A77A]"
+                    className="w-full min-h-[44px] px-3 py-2 border border-[#E5E5E5] text-sm rounded-md focus:outline-none focus:border-[#C2A77A]"
                   />
                 </div>
                 <div>
@@ -436,7 +437,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                     placeholder="MH"
                     value={formData.state}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="w-full min-h-[44px] px-3 py-2 border border-[#E5E5E5] text-sm focus:outline-none focus:border-[#C2A77A]"
+                    className="w-full min-h-[44px] px-3 py-2 border border-[#E5E5E5] text-sm rounded-md focus:outline-none focus:border-[#C2A77A]"
                   />
                 </div>
                 <div>
@@ -447,7 +448,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                     placeholder="400001"
                     value={formData.pincode}
                     onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                    className="w-full min-h-[44px] px-3 py-2 border border-[#E5E5E5] text-sm focus:outline-none focus:border-[#C2A77A]"
+                    className="w-full min-h-[44px] px-3 py-2 border border-[#E5E5E5] text-sm rounded-md focus:outline-none focus:border-[#C2A77A]"
                   />
                 </div>
               </div>
@@ -457,7 +458,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                 <label className="block text-xs font-heading font-semibold uppercase mb-2">Payment Method</label>
                 <div className="grid grid-cols-2 gap-3">
                   <label
-                    className={`flex flex-col p-3 border cursor-pointer transition-all ${
+                    className={`flex flex-col p-3 border cursor-pointer rounded-md transition-all ${
                       formData.paymentMethod === 'prepaid'
                         ? 'border-[#C2A77A] bg-[#F7F4EE]'
                         : 'border-[#E5E5E5]'
@@ -481,7 +482,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                   </label>
 
                   <label
-                    className={`flex flex-col p-3 border cursor-pointer transition-all ${
+                    className={`flex flex-col p-3 border cursor-pointer rounded-md transition-all ${
                       formData.paymentMethod === 'cod'
                         ? 'border-[#C2A77A] bg-[#F7F4EE]'
                         : 'border-[#E5E5E5]'
@@ -504,7 +505,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
               </div>
 
               {/* Order Summary box */}
-              <div className="p-3 bg-[#F9F9F9] border border-[#E5E5E5] text-xs space-y-1.5 font-body">
+              <div className="p-3 bg-[#F9F9F9] border border-[#E5E5E5] rounded-md text-xs space-y-1.5 font-body">
                 <div className="flex justify-between">
                   <span className="text-[#666666]">Items Total</span>
                   <span className="font-semibold tabular-nums">₹{subtotal}</span>
@@ -534,7 +535,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
               <button
                 type="submit"
                 disabled={placingOrder}
-                className="w-full min-h-[48px] py-3.5 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm uppercase tracking-wide transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-60"
+                className="w-full min-h-[48px] py-3.5 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm uppercase tracking-wide rounded-md transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-60"
               >
                 <span>{placingOrder ? 'SAVING ORDER…' : 'CONFIRM & PLACE ORDER'}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -555,7 +556,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
               </p>
               <button
                 onClick={closeCart}
-                className="min-h-[44px] px-6 py-2.5 bg-[#1A1A1A] text-white font-heading font-semibold text-xs uppercase tracking-wide"
+                className="min-h-[44px] px-6 py-2.5 bg-[#1A1A1A] text-white font-heading font-semibold text-xs uppercase tracking-wide rounded-md"
               >
                 Explore Collection
               </button>
@@ -572,7 +573,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"
-                      className="w-20 h-24 object-cover bg-[#F8F8F8] shrink-0 border border-[#E5E5E5]"
+                      className="w-20 h-24 object-cover bg-[#F8F8F8] shrink-0 border border-[#E5E5E5] rounded-md"
                     />
                     <div className="flex-1 min-w-0 flex flex-col justify-between">
                       <div>
@@ -601,7 +602,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                       </div>
 
                       <div className="flex items-center gap-3 mt-3">
-                        <div className="flex items-center border border-[#E5E5E5]">
+                        <div className="flex items-center border border-[#E5E5E5] rounded-md overflow-hidden">
                           <button
                             onClick={() => updateQuantity(item.product.id, item.size, item.quantity - 1)}
                             className="min-h-[36px] min-w-[36px] flex items-center justify-center text-[#1A1A1A] hover:bg-neutral-100"
@@ -631,6 +632,10 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
               <div className="border-t border-[#E5E5E5] px-4 sm:px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] bg-[#FBFBFB] space-y-4">
                 <div className="space-y-1.5 text-xs text-[#666666] font-body">
                   <div className="flex w-full items-center justify-between gap-3">
+                    <span className="shrink-0">Total Quantity</span>
+                    <span className="text-[#1A1A1A] font-medium tabular-nums whitespace-nowrap">{totalQuantity}</span>
+                  </div>
+                  <div className="flex w-full items-center justify-between gap-3">
                     <span className="shrink-0">Subtotal</span>
                     <span className="text-[#1A1A1A] font-medium tabular-nums whitespace-nowrap">₹{subtotal}</span>
                   </div>
@@ -650,7 +655,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
                     trackGa4BeginCheckout(pixelLines, subtotal);
                     setIsCheckingOut(true);
                   }}
-                  className="w-full min-h-[48px] py-3.5 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm tracking-[0.05em] transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  className="w-full min-h-[48px] py-3.5 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm tracking-[0.05em] rounded-md transition-colors flex items-center justify-center gap-2 shadow-sm"
                 >
                   <span>Buy Now</span>
                   <ArrowRight className="w-4 h-4" />

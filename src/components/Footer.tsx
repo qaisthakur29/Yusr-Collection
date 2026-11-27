@@ -30,7 +30,7 @@ export function Footer({ onNavigate }: FooterProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-14">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 py-6 border-y border-[#E5E5E5]">
           <div className="flex items-start gap-3.5">
-            <div className="w-9 h-9 bg-[#F7F4EE] flex items-center justify-center shrink-0 text-[#C2A77A]">
+            <div className="w-9 h-9 bg-[#F7F4EE] rounded-md flex items-center justify-center shrink-0 text-[#C2A77A]">
               <ShieldCheck className="w-4 h-4 text-[#C2A77A]" />
             </div>
             <div>
@@ -44,7 +44,7 @@ export function Footer({ onNavigate }: FooterProps) {
           </div>
 
           <div className="flex items-start gap-3.5">
-            <div className="w-9 h-9 bg-[#F7F4EE] flex items-center justify-center shrink-0 text-[#C2A77A]">
+            <div className="w-9 h-9 bg-[#F7F4EE] rounded-md flex items-center justify-center shrink-0 text-[#C2A77A]">
               <Truck className="w-4 h-4 text-[#C2A77A]" />
             </div>
             <div>
@@ -58,7 +58,7 @@ export function Footer({ onNavigate }: FooterProps) {
           </div>
 
           <div className="flex items-start gap-3.5">
-            <div className="w-9 h-9 bg-[#F7F4EE] flex items-center justify-center shrink-0 text-[#C2A77A]">
+            <div className="w-9 h-9 bg-[#F7F4EE] rounded-md flex items-center justify-center shrink-0 text-[#C2A77A]">
               <RefreshCw className="w-4 h-4 text-[#C2A77A]" />
             </div>
             <div>

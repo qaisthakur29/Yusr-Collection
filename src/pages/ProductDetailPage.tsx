@@ -209,7 +209,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                   <button
                     key={idx}
                     onClick={() => setActiveImage(img)}
-                    className={`relative w-20 h-24 border overflow-hidden transition-all ${
+                    className={`relative w-20 h-24 border overflow-hidden rounded-md transition-all ${
                       activeImage === img
                         ? 'border-[#1A1A1A] ring-1 ring-[#1A1A1A]'
                         : 'border-[#E5E5E5] opacity-70 hover:opacity-100'
@@ -229,7 +229,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
             )}
 
             {/* Quality Seals */}
-            <div className="grid grid-cols-3 gap-3 p-4 bg-[#FBFBFB] border border-[#E5E5E5] text-center text-xs">
+            <div className="grid grid-cols-3 gap-3 p-4 bg-[#FBFBFB] border border-[#E5E5E5] rounded-lg text-center text-xs">
               <div>
                 <span className="block font-heading font-semibold text-[#1A1A1A]">240 GSM</span>
                 <span className="text-[11px] text-[#666666]">Heavy cotton</span>
@@ -310,7 +310,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                     key={size}
                     type="button"
                     onClick={() => setSelectedSize(size)}
-                    className={`min-h-[48px] flex items-center justify-center font-heading font-medium text-sm tracking-wide transition-all border ${
+                    className={`min-h-[48px] flex items-center justify-center font-heading font-medium text-sm tracking-wide rounded-md transition-all border ${
                       selectedSize === size
                         ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
                         : 'bg-white text-[#1A1A1A] border-[#E5E5E5] hover:border-[#1A1A1A]'
@@ -330,7 +330,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="w-full min-h-[52px] py-4 bg-[#1A1A1A] hover:bg-[#333333] text-white font-heading font-medium text-sm tracking-wide transition-colors flex items-center justify-center gap-2"
+                className="w-full min-h-[52px] py-4 bg-[#1A1A1A] hover:bg-[#333333] text-white font-heading font-medium text-sm tracking-wide rounded-md transition-colors flex items-center justify-center gap-2"
               >
                 {justAdded ? (
                   <>
@@ -348,7 +348,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
               <button
                 type="button"
                 onClick={handleWhatsAppOrder}
-                className="w-full min-h-[44px] py-3 bg-transparent border border-[#E5E5E5] hover:border-[#1A1A1A] text-[#666666] hover:text-[#1A1A1A] font-body text-xs transition-colors flex items-center justify-center gap-2"
+                className="w-full min-h-[44px] py-3 bg-transparent border border-[#E5E5E5] hover:border-[#1A1A1A] text-[#666666] hover:text-[#1A1A1A] font-body text-xs rounded-md transition-colors flex items-center justify-center gap-2"
               >
                 <MessageCircle className="w-4 h-4 text-[#25D366]" />
                 <span>Have a question? Chat with us</span>
@@ -428,7 +428,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                 </button>
                 {openAccordion === 'size' && (
                   <div className="pb-4 overflow-x-auto">
-                    <table className="w-full text-xs text-left border border-[#E5E5E5]">
+                    <table className="w-full text-xs text-left border border-[#E5E5E5] rounded-md overflow-hidden">
                       <thead className="bg-[#F8F8F8] font-heading font-semibold text-[#1A1A1A] border-b border-[#E5E5E5]">
                         <tr>
                           <th className="p-2">Size</th>
@@ -539,7 +539,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
         <button
           type="button"
           onClick={handleAddToCart}
-          className="flex-1 min-h-[46px] py-3 bg-[#1A1A1A] hover:bg-[#333333] text-white font-heading font-medium text-sm tracking-wide flex items-center justify-center gap-2 transition-colors"
+          className="flex-1 min-h-[46px] py-3 bg-[#1A1A1A] hover:bg-[#333333] text-white font-heading font-medium text-sm tracking-wide rounded-md flex items-center justify-center gap-2 transition-colors"
         >
           {justAdded ? (
             <>
@@ -559,7 +559,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
       {showSizeModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-4">
           {/* Added max-h and overflow-y-auto so long images scroll inside the modal */}
-          <div className="bg-white max-w-lg w-full p-6 text-[#1A1A1A] shadow-2xl relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-white max-w-lg w-full p-6 text-[#1A1A1A] shadow-2xl rounded-lg relative max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center pb-4 border-b border-[#E5E5E5]">
               <h3 className="font-heading font-semibold text-base">
                 Size Guide
@@ -588,7 +588,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                 <p className="text-xs text-[#666666] my-3 font-body">
                   Our tees feature a custom drop-shoulder oversized streetwear fit. If you prefer a regular tailored fit, consider sizing down.
                 </p>
-                <div className="overflow-x-auto border border-[#E5E5E5]">
+                <div className="overflow-x-auto border border-[#E5E5E5] rounded-md">
                   <table className="w-full text-xs text-left">
                     <thead className="bg-[#F8F8F8] font-heading font-semibold text-[#1A1A1A] border-b border-[#E5E5E5]">
                       <tr>
@@ -618,7 +618,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
             <div className="mt-4 pt-3 border-t border-[#E5E5E5] flex justify-end">
               <button
                 onClick={() => setShowSizeModal(false)}
-                className="min-h-[40px] px-6 bg-[#1A1A1A] text-white font-heading font-medium text-xs"
+                className="min-h-[40px] px-6 bg-[#1A1A1A] text-white font-heading font-medium text-xs rounded-md"
               >
                 Close Guide
               </button>

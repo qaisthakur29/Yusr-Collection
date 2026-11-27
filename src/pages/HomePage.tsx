@@ -41,7 +41,7 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
     <div className="flex flex-col min-h-[100dvh] bg-white">
       {/* Toast Notification */}
       {addedBanner && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1A1A1A] text-white px-4 py-3 shadow-xl flex items-center gap-3 text-xs font-heading font-semibold border-l-4 border-[#C2A77A] animate-fade-in">
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1A1A1A] text-white px-4 py-3 shadow-xl rounded-md flex items-center gap-3 text-xs font-heading font-semibold border-l-4 border-[#C2A77A] animate-fade-in">
           <Check className="w-4 h-4 text-[#C2A77A]" />
           <span>{addedBanner}</span>
         </div>
@@ -77,7 +77,7 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
               e.preventDefault();
               onNavigate('/shop');
             }}
-            className="min-h-[48px] px-10 sm:px-14 py-3.5 sm:py-4 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm tracking-[0.08em] uppercase transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.99]"
+            className="min-h-[48px] px-10 sm:px-14 py-3.5 sm:py-4 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-sm tracking-[0.08em] uppercase rounded-md transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.99]"
           >
             <span>SHOP NOW</span>
             <ArrowRight className="w-4 h-4 text-[#111111]" />
@@ -133,7 +133,7 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
                   <div className="absolute inset-x-2 bottom-2 hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button
                       onClick={(e) => handleQuickAdd(product, e)}
-                      className="w-full min-h-[40px] py-2 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-xs uppercase tracking-wide transition-colors shadow-md"
+                      className="w-full min-h-[40px] py-2 bg-[#C2A77A] hover:bg-[#B39665] text-[#111111] font-heading font-bold text-xs uppercase tracking-wide rounded-md transition-colors shadow-md"
                     >
                       Quick Add ({activeSize})
                     </button>
@@ -175,7 +175,7 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
                         onClick={() =>
                           setSelectedQuickSize((prev) => ({ ...prev, [product.id]: s }))
                         }
-                        className={`min-w-[28px] h-7 px-1.5 text-[11px] font-heading font-semibold transition-colors border ${
+                        className={`min-w-[28px] h-7 px-1.5 text-[11px] font-heading font-semibold rounded-md transition-colors border ${
                           activeSize === s
                             ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
                             : 'bg-white text-[#666666] border-[#E5E5E5] hover:border-[#1A1A1A]'
@@ -204,7 +204,7 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
                   {/* Mobile Quick Add Button (min 44px) */}
                   <button
                     onClick={(e) => handleQuickAdd(product, e)}
-                    className="md:hidden mt-3 w-full min-h-[44px] py-2.5 bg-[#C2A77A] text-[#111111] font-heading font-bold text-xs uppercase tracking-wide"
+                    className="md:hidden mt-3 w-full min-h-[44px] py-2.5 bg-[#C2A77A] text-[#111111] font-heading font-bold text-xs uppercase tracking-wide rounded-md"
                   >
                     Add to Cart ({activeSize})
                   </button>
@@ -234,7 +234,7 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
               e.preventDefault();
               onNavigate('/about');
             }}
-            className="min-h-[48px] px-8 py-3.5 bg-transparent border-2 border-[#C2A77A] text-[#C2A77A] hover:bg-[#C2A77A] hover:text-[#111111] font-heading font-bold text-xs sm:text-sm uppercase tracking-[0.05em] transition-all inline-flex items-center justify-center"
+            className="min-h-[48px] px-8 py-3.5 bg-transparent border-2 border-[#C2A77A] text-[#C2A77A] hover:bg-[#C2A77A] hover:text-[#111111] font-heading font-bold text-xs sm:text-sm uppercase tracking-[0.05em] rounded-md transition-all inline-flex items-center justify-center"
           >
             READ THE FOUNDER'S STORY
           </a>
