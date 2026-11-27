@@ -85,39 +85,7 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
         </div>
       </section>
 
-      {/* 2. VALUE PROPOSITIONS BAR - Clean, global apparel copy */}
-      <section className="bg-[#F8F8F8] border-b border-[#E5E5E5] py-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div className="p-2">
-              <span className="block font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]">
-                Premium Streetwear
-              </span>
-              <span className="text-[11px] text-[#666666]">Crafted for the believers</span>
-            </div>
-            <div className="p-2">
-              <span className="block font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]">
-                Architectural Fit
-              </span>
-              <span className="text-[11px] text-[#666666]">Modest drop-shoulder drape</span>
-            </div>
-            <div className="p-2">
-              <span className="block font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]">
-                Made-To-Order
-              </span>
-              <span className="text-[11px] text-[#666666]">Custom crafted for you</span>
-            </div>
-            <div className="p-2">
-              <span className="block font-heading font-bold text-xs uppercase tracking-wider text-[#1A1A1A]">
-                Free India Shipping
-              </span>
-              <span className="text-[11px] text-[#666666]">On all prepaid orders</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. FEATURED COLLECTION SECTION (2 cols mobile, 4 cols desktop) */}
+      {/* 2. FEATURED COLLECTION SECTION (2 cols mobile, 4 cols desktop) */}
       <section className="py-16 md:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Title Header */}

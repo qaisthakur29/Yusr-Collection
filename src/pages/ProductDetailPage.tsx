@@ -335,22 +335,6 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
               </p>
             </div>
 
-            {/* Bundle Offers */}
-            <div className="mt-6 border border-[#E5E5E5] divide-y divide-[#E5E5E5]">
-              <div className="flex items-center justify-between px-4 py-3">
-                <span className="font-body text-xs text-[#1A1A1A]">
-                  Buy 2 <span className="text-[#666666]">for</span> ₹1999
-                </span>
-                <span className="font-heading font-semibold text-[11px] text-[#C2A77A]">Save ₹399</span>
-              </div>
-              <div className="flex items-center justify-between px-4 py-3">
-                <span className="font-body text-xs text-[#1A1A1A]">
-                  Buy 3 <span className="text-[#666666]">for</span> ₹2699
-                </span>
-                <span className="font-heading font-semibold text-[11px] text-[#C2A77A]">Save ₹898</span>
-              </div>
-            </div>
-
             {/* Action Buttons (Primary dark CTA + quiet WhatsApp support link) */}
             <div ref={primaryActionRef} className="mt-6 space-y-3">
               <button
