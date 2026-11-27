@@ -136,159 +136,166 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
     setPlacingOrder(true);
     setCheckoutError(null);
 
-    // ---------- COD: save the order first, then hand off to WhatsApp ----------
-    if (!isPrepaid) {
-      // The anon role may INSERT but not read rows back (there is no SELECT policy),
-      // so the id is generated client-side and `.select()` is deliberately omitted.
-      const orderId = crypto.randomUUID();
-      const orderNumber = `YUSR-${Math.floor(100000 + Math.random() * 900000)}`;
+    // Tracks whether the Razorpay modal actually opened. When it does, the
+    // loading state is intentionally kept until Razorpay's handler/ondismiss
+    // resets it; on any error (or before the modal opens) `finally` clears it,
+    // so the button can never get stuck on "SAVING ORDER…".
+    let razorpayModalOpened = false;
 
-      const { error: insertError } = await supabase.from('orders').insert({
-        id: orderId,
-        order_number: orderNumber,
-        customer_name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        email: formData.email.trim(),
-        address: fullAddress,
-        total_amount: orderTotal,
-        status: 'Pending',
-        payment_method: 'COD',
-      });
+    try {
+      // ---------- COD: save the order first, then hand off to WhatsApp ----------
+      if (!isPrepaid) {
+        // The anon role may INSERT but not read rows back (there is no SELECT policy),
+        // so the id is generated client-side and `.select()` is deliberately omitted.
+        const orderId = crypto.randomUUID();
+        const orderNumber = `YUSR-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      setPlacingOrder(false);
+        const { error: insertError } = await supabase.from('orders').insert({
+          id: orderId,
+          order_number: orderNumber,
+          customer_name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          address: fullAddress,
+          total_amount: orderTotal,
+          status: 'Pending',
+          payment_method: 'COD',
+        });
 
-      if (insertError) {
-        setCheckoutError(insertError.message || 'Could not save this order. Please try again.');
-        return;
-      }
-
-      setOrderSuccess(true);
-      // Order row is in Supabase and COD is confirmed, so this counts as a sale.
-      trackPurchase(pixelLines, orderTotal);
-      trackGa4Purchase(pixelLines, orderTotal, orderId);
-      setTimeout(() => {
-        openWhatsApp(orderNumber);
-        clearCart();
-      }, 1500);
-      return;
-    }
-
-    // ---------- Prepaid: create the Razorpay order, confirm after payment ----------
-    // Only product ids and quantities go up: the Edge Function prices them from
-    // the catalogue, so the browser cannot influence what it is charged. It also
-    // writes the Pending order the payment is later verified against.
-    const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
-      body: {
-        items: items.map((item) => ({ id: item.product.id, quantity: item.quantity })),
-        customer_name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        email: formData.email.trim(),
-        address: fullAddress,
-      },
-    });
-
-    if (error || !data) {
-      setCheckoutError(error?.message || 'Could not start the payment. Please try again.');
-      setPlacingOrder(false);
-      return;
-    }
-
-    // Set the moment the payment handler runs. Razorpay also fires `ondismiss`
-    // when the modal closes after a successful payment, so the cleanup below
-    // must not delete a Pending order that is already being verified.
-    let paymentCompleted = false;
-
-    const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: data.amount,
-      currency: 'INR',
-      name: 'Yusr Collection',
-      description: 'Premium Streetwear',
-      order_id: data.order_id,
-      prefill: {
-        name: formData.name,
-        contact: formData.phone,
-        email: formData.email || '',
-      },
-      theme: { color: '#C2A77A' },
-      handler: async function (response: {
-        razorpay_payment_id: string;
-        razorpay_order_id: string;
-        razorpay_signature: string;
-      }) {
-        paymentCompleted = true;
-        // Never trust the browser for payment status: the Edge Function verifies
-        // the HMAC signature, re-checks the captured amount against the Pending
-        // order, and marks it paid itself.
-        const { data: verified, error: verifyError } = await supabase.functions.invoke(
-          'verify-razorpay-payment',
-          {
-            body: {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            },
-          },
-        );
-
-        setPlacingOrder(false);
-
-        if (verifyError || !verified?.success || !verified?.order_id) {
-          setCheckoutError(
-            'We could not verify your payment. If money was deducted, please contact us on WhatsApp.',
-          );
+        if (insertError) {
+          setCheckoutError(insertError.message || 'Could not save this order. Please try again.');
           return;
         }
 
         setOrderSuccess(true);
-        // Only after the signature check passed and the order row was written.
-        trackPurchase(pixelLines, orderTotal);
-        trackGa4Purchase(pixelLines, orderTotal, verified.order_id);
+        // COD is confirmed without any online payment, so deliberately no
+        // 'Purchase' event is sent to Meta/GA4 — a revenue-bearing conversion
+        // with no money collected would distort ad optimisation and reporting.
         setTimeout(() => {
-          openWhatsApp(
-            verified.order_number ?? data.order_number ?? '—',
-            response.razorpay_payment_id,
-          );
+          openWhatsApp(orderNumber);
           clearCart();
         }, 1500);
-      },
-      modal: {
-        ondismiss: function () {
-          setPlacingOrder(false); // Stop loading state if user cancels
+        return;
+      }
 
-          // A completed payment also closes the modal, so never clean up once
-          // the handler has started verifying — that order is about to be paid.
-          if (paymentCompleted) return;
-
-          setCheckoutError('Payment cancelled. You can try again.');
-
-          // The customer abandoned checkout, so the 'Pending' row
-          // create-razorpay-order wrote is an orphan. Best-effort cleanup: the
-          // function only deletes orders still 'Pending' for this exact Razorpay
-          // order, so a paid order (or a COD one, which has no razorpay_order_id)
-          // can never be removed by this call.
-          void supabase.functions
-            .invoke('delete-pending-order', { body: { razorpay_order_id: data.order_id } })
-            .catch(() => {});
+      // ---------- Prepaid: create the Razorpay order, confirm after payment ----------
+      // Only product ids and quantities go up: the Edge Function prices them from
+      // the catalogue, so the browser cannot influence what it is charged. It also
+      // writes the Pending order the payment is later verified against.
+      const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+        body: {
+          items: items.map((item) => ({ id: item.product.id, quantity: item.quantity })),
+          customer_name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          address: fullAddress,
         },
-      },
-    };
+      });
 
-    // checkout.js is loaded from a CDN, so ad-blockers or a network failure can
-    // leave window.Razorpay undefined. Without this guard the submit button
-    // would stay stuck on its loading state forever.
-    if (typeof window.Razorpay !== 'function') {
-      setCheckoutError('Payment gateway blocked by browser. Please disable ad-blockers.');
-      setPlacingOrder(false);
-      return;
-    }
+      if (error || !data) {
+        setCheckoutError(error?.message || 'Could not start the payment. Please try again.');
+        return;
+      }
 
-    try {
+      // Set the moment the payment handler runs. Razorpay also fires `ondismiss`
+      // when the modal closes after a successful payment, so the cleanup below
+      // must not delete a Pending order that is already being verified.
+      let paymentCompleted = false;
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: data.amount,
+        currency: 'INR',
+        name: 'Yusr Collection',
+        description: 'Premium Streetwear',
+        order_id: data.order_id,
+        prefill: {
+          name: formData.name,
+          contact: formData.phone,
+          email: formData.email || '',
+        },
+        theme: { color: '#C2A77A' },
+        handler: async function (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) {
+          paymentCompleted = true;
+          // Never trust the browser for payment status: the Edge Function verifies
+          // the HMAC signature, re-checks the captured amount against the Pending
+          // order, and marks it paid itself.
+          const { data: verified, error: verifyError } = await supabase.functions.invoke(
+            'verify-razorpay-payment',
+            {
+              body: {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              },
+            },
+          );
+
+          setPlacingOrder(false);
+
+          if (verifyError || !verified?.success || !verified?.order_id) {
+            setCheckoutError(
+              'We could not verify your payment. If money was deducted, please contact us on WhatsApp.',
+            );
+            return;
+          }
+
+          setOrderSuccess(true);
+          // Only after the signature check passed and the order row was written.
+          trackPurchase(pixelLines, orderTotal);
+          trackGa4Purchase(pixelLines, orderTotal, verified.order_id);
+          setTimeout(() => {
+            openWhatsApp(
+              verified.order_number ?? data.order_number ?? '—',
+              response.razorpay_payment_id,
+            );
+            clearCart();
+          }, 1500);
+        },
+        modal: {
+          ondismiss: function () {
+            setPlacingOrder(false); // Stop loading state if user cancels
+
+            // A completed payment also closes the modal, so never clean up once
+            // the handler has started verifying — that order is about to be paid.
+            if (paymentCompleted) return;
+
+            setCheckoutError('Payment cancelled. You can try again.');
+
+            // The customer abandoned checkout, so the 'Pending' row
+            // create-razorpay-order wrote is an orphan. Best-effort cleanup: the
+            // function only deletes orders still 'Pending' for this exact Razorpay
+            // order, so a paid order (or a COD one, which has no razorpay_order_id)
+            // can never be removed by this call.
+            void supabase.functions
+              .invoke('delete-pending-order', { body: { razorpay_order_id: data.order_id } })
+              .catch(() => {});
+          },
+        },
+      };
+
+      // checkout.js is loaded from a CDN, so ad-blockers or a network failure can
+      // leave window.Razorpay undefined. Without this guard the submit button
+      // would stay stuck on its loading state forever.
+      if (typeof window.Razorpay !== 'function') {
+        setCheckoutError('Payment gateway blocked by browser. Please disable ad-blockers.');
+        return;
+      }
+
       const rzp = new window.Razorpay(options);
       rzp.open();
-    } catch {
-      setCheckoutError('Payment gateway blocked by browser. Please disable ad-blockers.');
-      setPlacingOrder(false);
+      razorpayModalOpened = true;
+    } catch (err) {
+      console.error('Checkout failed:', err);
+      setCheckoutError(
+        'Something went wrong while placing your order. Please try again or contact us on WhatsApp.',
+      );
+    } finally {
+      if (!razorpayModalOpened) setPlacingOrder(false);
     }
   };
 
@@ -349,7 +356,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
             </div>
           ) : isCheckingOut ? (
             /* Checkout Form */
-            <form onSubmit={handleCheckoutSubmit} className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-4">
+            <form onSubmit={handleCheckoutSubmit} className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E5]">
                 <h3 className="font-heading font-bold text-sm uppercase tracking-wide">Shipping & Contact</h3>
                 <button
@@ -621,7 +628,7 @@ Please confirm my order and share payment/tracking details. Alhamdulillah!`;
               </div>
 
               {/* Cart Summary (No Promo Code Box) */}
-              <div className="border-t border-[#E5E5E5] px-4 sm:px-6 py-6 bg-[#FBFBFB] space-y-4">
+              <div className="border-t border-[#E5E5E5] px-4 sm:px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] bg-[#FBFBFB] space-y-4">
                 <div className="space-y-1.5 text-xs text-[#666666] font-body">
                   <div className="flex w-full items-center justify-between gap-3">
                     <span className="shrink-0">Subtotal</span>

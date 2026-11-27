@@ -485,7 +485,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
       </div>
 
       {/* Sticky Bottom Buy Bar on Mobile (Android-Optimized) */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-[#E5E5E5] p-3 z-30 flex items-center gap-3">
+      <div className="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-[#E5E5E5] px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-3">
         <div className="flex flex-col">
           <span className="text-[10px] text-[#666666] uppercase font-heading">Total Price</span>
           <span className="font-heading font-bold text-base text-[#1A1A1A] tabular-nums">

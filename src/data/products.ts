@@ -166,6 +166,7 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
     .from('products')
     .select(PRODUCT_COLUMNS)
     .eq('slug', slug)
+    .eq('is_active', true)
     .maybeSingle();
 
   if (error) {
