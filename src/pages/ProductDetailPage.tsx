@@ -301,12 +301,12 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
                 {justAdded ? (
                   <>
                     <Check className="w-5 h-5 text-[#111111]" />
-                    <span>ADDED TO BAG!</span>
+                    <span>ADDED TO CART!</span>
                   </>
                 ) : (
                   <>
                     <ShoppingBag className="w-5 h-5 text-[#111111]" />
-                    <span>ADD TO BAG · ₹{product.price}</span>
+                    <span>ADD TO CART · ₹{product.price}</span>
                   </>
                 )}
               </button>
@@ -497,7 +497,7 @@ export function ProductDetailPage({ product, onNavigate }: ProductDetailPageProp
           className="flex-1 min-h-[46px] py-3 bg-[#C2A77A] text-[#111111] font-heading font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm"
         >
           <ShoppingBag className="w-4 h-4" />
-          <span>Add to Bag ({selectedSize})</span>
+          <span>Add to Cart ({selectedSize})</span>
         </button>
       </div>
 

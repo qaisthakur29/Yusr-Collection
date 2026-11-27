@@ -231,12 +231,12 @@ export function ShopPage({ onSelectProduct }: ShopPageProps) {
                     </span>
                   </div>
 
-                  {/* Mobile Add to Bag Button */}
+                  {/* Mobile Add to Cart Button */}
                   <button
                     onClick={(e) => handleQuickAdd(product, e)}
                     className="md:hidden mt-3 w-full min-h-[44px] py-2.5 bg-[#C2A77A] text-[#111111] font-heading font-bold text-xs uppercase tracking-wide"
                   >
-                    Add to Bag ({currentSize})
+                    Add to Cart ({currentSize})
                   </button>
                 </div>
               </div>

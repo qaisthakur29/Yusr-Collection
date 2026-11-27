@@ -238,7 +238,7 @@ export function HomePage({ onNavigate, onSelectProduct }: HomePageProps) {
                     onClick={(e) => handleQuickAdd(product, e)}
                     className="md:hidden mt-3 w-full min-h-[44px] py-2.5 bg-[#C2A77A] text-[#111111] font-heading font-bold text-xs uppercase tracking-wide"
                   >
-                    Add to Bag ({activeSize})
+                    Add to Cart ({activeSize})
                   </button>
                 </div>
               </div>
